@@ -1,17 +1,24 @@
 #include "qwarntipsdialog.h"
-#include "ui_qwarntipsdialog.h"
 
 QWarnTipsDialog::QWarnTipsDialog(QWidget *parent,QString message) :
-    QDialog(parent),
-    ui(new Ui::QWarnTipsDialog)
+    QDialog(parent)
 {
-    ui->setupUi(this);
+    this->setFixedSize(220,160);
     this->setWindowFlags(this->windowFlags() |Qt::WindowStaysOnTopHint | Qt::FramelessWindowHint);
+    this->setStyleSheet("background-color: rgb(59, 61, 66, 100);border-radius: 10px;  border: 3px  rgb(59, 61, 66, 100);");
+
+    warnlogo = new QLabel(this);
+    warnlogo->setFixedSize(61,61);
+    warnlogo->move(20,40);
+
+    tipsmessage = new QLabel(this);
+    tipsmessage->setFixedSize(91,81);
+    tipsmessage->move(100,40);
 
     QFont font;
     font.setPixelSize(18);
-    ui->tipsmessage->setFont(font);
-    ui->tipsmessage->setText(message);
+    tipsmessage->setFont(font);
+    tipsmessage->setText(message);
 
     timer = new QTimer(this);
     connect(timer,SIGNAL(timeout()),this,SLOT(close()));
@@ -21,5 +28,7 @@ QWarnTipsDialog::QWarnTipsDialog(QWidget *parent,QString message) :
 
 QWarnTipsDialog::~QWarnTipsDialog()
 {
-    delete ui;
+    delete warnlogo;
+    delete tipsmessage;
+    delete timer;
 }

@@ -4,7 +4,7 @@
 #
 #-------------------------------------------------
 
-QT       += core gui
+QT       += core gui serialport
 QT     += concurrent
 
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
@@ -25,8 +25,16 @@ SOURCES += main.cpp\
     qdeletedialog.cpp \
     qcreatedirdialog.cpp \
     qwarntipsdialog.cpp \
-    qdisplayphotodialog.cpp \
-    qshowimagewidget.cpp
+    qshowimagewidget.cpp \
+    videobrowser/PlayWidgetcpy.cpp \
+    videobrowser/qshowvieowidget.cpp \
+    videobrowser/qvideobrowser.cpp \
+    videobrowser/videodec.cpp \
+    serial/crc16.cpp \
+    serial/master.cpp \
+    serial/myserialport.cpp \
+    serial/qmasterthread.cpp \
+    serial/qmyserial.cpp
 
 HEADERS  += qimagebrowser.h \
     qimagelistwidget.h \
@@ -39,35 +47,43 @@ HEADERS  += qimagebrowser.h \
     qdeletedialog.h \
     qcreatedirdialog.h \
     qwarntipsdialog.h \
-    qdisplayphotodialog.h \
-    qshowimagewidget.h
+    qshowimagewidget.h \
+    videobrowser/PlayWidgetcpy.h \
+    videobrowser/qshowvieowidget.h \
+    videobrowser/qvideobrowser.h \
+    videobrowser/videodec.h \
+    serial/address.h \
+    serial/crc16.h \
+    serial/master.h \
+    serial/myserialport.h \
+    serial/qmasterthread.h \
+    serial/qmyserial.h
 
-FORMS    += qimagebrowser.ui \
-    keyboardform.ui \
-    qrenamedialog.ui \
-    qdeletedialog.ui \
-    qcreatedirdialog.ui \
-    qwarntipsdialog.ui \
-    qdisplayphotodialog.ui
+FORMS    += \
+    keyboardform.ui
 
 RESOURCES += \
     images.qrc
 
 
-LIBS += -L/usr/lib/i386-linux-gnu/   -lavcodec \
-                -lavformat \
-                -lswscale \
-                -lavutil \
-                -lswscale \
-                -lavutil \
-                -lSDL \
-                -lSDL_image \
-                -lpng    \
-               -L/usr/local/lib/ -ljpeg \
 
-
-INCLUDEPATH += /usr/include
-INCLUDEPATH += /usr/lib/i386-linux-gnu
+#INCLUDEPATH += /usr/include
+#INCLUDEPATH += /usr/lib/i386-linux-gnu
 
 OTHER_FILES += \
     images/warning.png
+
+
+INCLUDEPATH += -I/sysroots/cortexa9hf-vfp-neon-phytec-linux-gnueabi/usr/include
+#INCLUDEPATH += -I/home/wzk/workspace/SDL/include
+#INCLUDEPATH += -I/home/wzk/workspace/turbojpeg/libjpeg-turbo-master-release/include
+
+LIBS += -L/sysroots/cortexa9hf-vfp-neon-phytec-linux-gnueabi/usr/lib -lavcodec \
+                -lavformat \
+                -lswscale \
+                -lavutil \
+                -lpng    \
+                -ljpeg
+#LIBS += -L/home/wzk/workspace/SDL -lSDL-1.2
+#LIBS += -L/home/wzk/workspace/turbojpeg/libjpeg-turbo-master-release/lib -ljpeg -lturbojpeg
+

@@ -2,10 +2,8 @@
 #define QWARNTIPSDIALOG_H
 
 #include <QDialog>
+#include <QLabel>
 #include <QTimer>
-namespace Ui {
-class QWarnTipsDialog;
-}
 
 class QWarnTipsDialog : public QDialog
 {
@@ -16,8 +14,8 @@ public:
     ~QWarnTipsDialog();
 
 private:
-    Ui::QWarnTipsDialog *ui;
-
+    QLabel *warnlogo;
+    QLabel *tipsmessage;
     QTimer *timer;
 };
 

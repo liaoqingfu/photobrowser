@@ -75,12 +75,14 @@ int get_Video_Frame(char *filename,uint8_t *rgbframe,int dstw,int dsth)
         printf("error!\n"); // 打不开解码器
 
     AVPacket packet;
-    AVFrame*   pFrame=avcodec_alloc_frame();
-    AVFrame *pFrameRGB = avcodec_alloc_frame();
+    AVFrame*   pFrame=av_frame_alloc();//avcodec_alloc_frame();
+    AVFrame *pFrameRGB =av_frame_alloc();// avcodec_alloc_frame();
+
     //int numBytes=avpicture_get_size(AV_PIX_FMT_RGB24, pCodecCtx->width,pCodecCtx->height);
     //uint8_t *buffer=new uint8_t[numBytes];
-    avpicture_fill((AVPicture *)pFrameRGB, rgbframe, AV_PIX_FMT_RGB24,dstw, dsth);
-    SwsContext* pSWSCtx = sws_getContext(pCodecCtx->width, pCodecCtx->height, pCodecCtx->pix_fmt, dstw,dsth, AV_PIX_FMT_RGB24, SWS_BICUBIC, NULL, NULL, NULL);
+    //AV_PIX_FMT_YUV420P
+    avpicture_fill((AVPicture *)pFrameRGB, rgbframe, AV_PIX_FMT_YUV420P,dstw, dsth);
+    SwsContext* pSWSCtx = sws_getContext(pCodecCtx->width, pCodecCtx->height, pCodecCtx->pix_fmt, dstw,dsth, AV_PIX_FMT_YUV420P, SWS_BICUBIC, NULL, NULL, NULL);
 
     int  i=0;
     int frameFinished = 0;

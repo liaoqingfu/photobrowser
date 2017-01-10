@@ -5,7 +5,7 @@ QImageListWidget::QImageListWidget(QWidget *parent) :
 {
     getPos = true;
 
-    this->setStyleSheet(tr("{background: white}"));
+    this->setStyleSheet(tr("{background-color:rgb(59, 61, 66, 100);}"));
     //设置QImageListWidget中的单元项的图片大小
     this->setIconSize(QSize(WICONSIZE,HICONSIZE));
     this->setResizeMode(QListView::Adjust);
@@ -17,7 +17,7 @@ QImageListWidget::QImageListWidget(QWidget *parent) :
     this->setSpacing(25);
 
     this->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
-
+    //点击选中时，前后状态
     connect(this,SIGNAL(currentItemChanged(QListWidgetItem*,QListWidgetItem*)),
             this,SLOT(selectCurrentItem(QListWidgetItem *, QListWidgetItem *)));
 
@@ -28,7 +28,7 @@ QImageListWidget:: ~QImageListWidget()
 
 }
 
-//keyevent
+//键盘事件
 void QImageListWidget::keyPressEvent(QKeyEvent *e)
 {
     if(e->key() == Qt::Key_Up)
@@ -58,7 +58,6 @@ void QImageListWidget::keyPressEvent(QKeyEvent *e)
 
         this->setCurrentRow(this->currentRow() + 4);
 
-
     }
     else if(e->key() == Qt::Key_Left)
     {
@@ -75,11 +74,11 @@ void QImageListWidget::keyPressEvent(QKeyEvent *e)
 
         this->setCurrentRow(this->currentRow() + 1);
     }
-    else if(e->key() == Qt::Key_Return)
+    else if(e->key() == Qt::Key_Return)//点击
     {
         emit itemClicked(this->currentItem());
     }
-    else if(e->key() == Qt::Key_Enter)
+    else if(e->key() == Qt::Key_Enter)//返回
     {
         foreach (QString itemname, listItemName) {
             QIconWidget *item = this->findChild<QIconWidget *>(itemname);
@@ -97,28 +96,29 @@ void QImageListWidget::keyPressEvent(QKeyEvent *e)
         emit clickselectList(this);
     }
 
-
     QWidget::keyPressEvent(e);
 }
 
 
+//删除列表的一个
 void QImageListWidget::removeListName(QString itemname)
 {
     listItemName.removeOne(itemname);
 }
 
-
+//加入列表的一个
 void QImageListWidget::addListName(QString itemname)
 {
     listItemName<<itemname;
 }
 
+//改变列表一个名称
 void QImageListWidget::changeListName(QString oldnaeme, QString newname)
 {
     listItemName.replaceInStrings(oldnaeme,newname);
 }
 
-
+//鼠标移动事件
 void QImageListWidget::mouseMoveEvent(QMouseEvent *event)
 {
     if(getPos)
@@ -166,7 +166,7 @@ void QImageListWidget::mouseMoveEvent(QMouseEvent *event)
 
 }
 
-
+//选择当前项目
 void QImageListWidget::selectCurrentItem(QListWidgetItem *current, QListWidgetItem *previous)
 {
 

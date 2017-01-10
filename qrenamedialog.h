@@ -2,15 +2,15 @@
 #define QRENAMEDIALOG_H
 
 #include <QDialog>
+#include <QHBoxLayout>
+#include<QVBoxLayout>
+#include <QLineEdit>
 #include <qtimer.h>
 #include <QListWidget>
 #include <QListWidgetItem>
 #include <qimagelistwidget.h>
 #include <qwarntipsdialog.h>
-
-namespace Ui {
-class QRenameDialog;
-}
+#include "keyboardform.h"
 
 class QRenameDialog : public QDialog
 {
@@ -35,7 +35,12 @@ private slots:
     void check_lineEdit();
 
 private:
-    Ui::QRenameDialog *ui;
+
+    QLabel *tittle;
+    QPushButton *sureBtn;
+    QPushButton *cancelBtn;
+    QLineEdit *lineEdit;
+    KeyBoardForm *keyboard;
 
     QImageListWidget *currentlist;
 

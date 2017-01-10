@@ -1,75 +1,124 @@
 #include "qrenamedialog.h"
-#include "ui_qrenamedialog.h"
 
 QRenameDialog::QRenameDialog(QWidget *parent,QImageListWidget *list) :
-    QDialog(parent),
-    ui(new Ui::QRenameDialog)
+    QDialog(parent)
 {
-    ui->setupUi(this);
     this->setWindowFlags(this->windowFlags() |Qt::WindowStaysOnTopHint | Qt::FramelessWindowHint);
+    this->setFixedSize(550,400);
+    this->setStyleSheet("background-color: rgb(59, 61, 66, 100);border-radius: 10px;  border: 3px  rgb(59, 61, 66, 100);");
 
     currentlist = list;
 
-    ui->lineEdit->setFocusPolicy(Qt::NoFocus);
+    QFont tittlefont;
+    tittlefont.setPixelSize(30);
+
+    tittle = new QLabel(tr("重命名"),NULL);
+    tittle->setStyleSheet("color: rgb(255, 255, 255);background-color: rgb(68, 119, 180);");
+    tittle->setFont(tittlefont);
+    tittle->setAlignment(Qt::AlignCenter);
+
+    sureBtn = new QPushButton(tr("确定"));
+    connect(sureBtn,SIGNAL(clicked()),this,SLOT(on_sureBtn_clicked()));
+    cancelBtn = new QPushButton(tr("取消"));
+    connect(cancelBtn,SIGNAL(clicked()),this,SLOT(on_cancelBtn_clicked()));
+
+     sureBtn->setStyleSheet("QPushButton{background-color:  rgb(59, 61, 66, 100); \
+                            color: white; \
+                             border-radius: 10px; \
+                             border: 2px groove gray;\
+                              border-style: outset;}"
+                             "QPushButton:focus{background-color:orange; \
+                              color: white;}"
+                             "QPushButton:pressed{background-color:rgb(85, 170, 255);\
+                             border-style: inset; }");
+
+
+ cancelBtn->setStyleSheet("QPushButton{background-color:  rgb(59, 61, 66, 100); \
+                          color: white; \
+                         border-radius: 10px; \
+                         border: 2px groove gray;\
+                         border-style: outset;}"
+                         "QPushButton:focus{background-color:orange; \
+                         color: white;}"
+                         "QPushButton:pressed{background-color:rgb(85, 170, 255);\
+                         border-style: inset; }");
+
+
+    lineEdit = new QLineEdit;
+    lineEdit->setFixedWidth(250);
     QFont font;
-
     font.setPixelSize(45);
+    lineEdit->setFocusPolicy(Qt::NoFocus);
+    lineEdit->setFont(font);
+    lineEdit->setAlignment(Qt::AlignCenter);
+    lineEdit->setStyleSheet("QLineEdit{ color: black; \
+                            background-color: white; \
+                            border-radius: 10px; \
+                            border: 2px groove gray;\
+                            border-style: outset;}");
 
-    ui->lineEdit->setFont(font);
+    lineEdit->setText(currentlist->currentItem()->text().split('.').first());
 
-    ui->lineEdit->setAlignment(Qt::AlignCenter);
+    keyboard = new KeyBoardForm;
 
-    ui->lineEdit->setStyleSheet("QLabel{background-color: blue; \
-                                color: white; \
-                                border-radius: 10px; \
-                                border: 2px groove gray;\
-                                border-style: outset;}");
+    QHBoxLayout  *hlayout1 = new QHBoxLayout;
+    hlayout1->addSpacing(200);
+    hlayout1->addWidget(lineEdit);
+    hlayout1->addSpacing(200);
 
+    QHBoxLayout  *hlayout2 = new QHBoxLayout;
+    hlayout2->addSpacing(200);
+    hlayout2->addWidget(sureBtn);
+    hlayout2->addSpacing(200);
+    hlayout2->addWidget(cancelBtn);
+    hlayout2->addSpacing(200);
 
+    QVBoxLayout *layout = new QVBoxLayout;
+    layout->setContentsMargins(9,9,9,9);
+    layout->addWidget(tittle);
+    layout->addLayout(hlayout1);
+    layout->addWidget(keyboard);
+    layout->addLayout(hlayout2);
 
-    ui->lineEdit->setText(currentlist->currentItem()->text().split('.').first());
+    this->setLayout(layout);
 
-    if(currentlist->currentItem()->text().right(4).left(1) == ".")
-        suffix = tr(".") + currentlist->currentItem()->text().split('.').last();
+        if(currentlist->currentItem()->text().right(4).left(1) == ".")
+                   suffix = tr(".") + currentlist->currentItem()->text().split('.').last();
 
+        connect(keyboard,SIGNAL(sendWord(QString)),this,SLOT(setLineEdit(QString)));
+        connect(keyboard,SIGNAL(delWord()),this,SLOT(delLineEdit()));
 
-    connect(ui->keyboard,SIGNAL(sendWord(QString)),this,SLOT(setLineEdit(QString)));
-    connect(ui->keyboard,SIGNAL(delWord()),this,SLOT(delLineEdit()));
-
-    timer = new QTimer(this);
-    connect(timer,SIGNAL(timeout()),this,SLOT(check_lineEdit()));
-    timer->start(500);
-
+        timer = new QTimer(this);
+        connect(timer,SIGNAL(timeout()),this,SLOT(check_lineEdit()));
+        timer->start(500);
 }
 
 QRenameDialog::~QRenameDialog()
 {
     delete timer;
-    delete ui;
 }
 
 
 //设置标题
 void QRenameDialog::setLineEdit(QString name)
 {
-    //this->name += name;
     QString tmp;
-    tmp = ui->lineEdit->text() + name;
+    tmp = lineEdit->text() + name;
     if(tmp.size() > 15)
     {
         tmp = tmp.remove(0,1);
     }
-    ui->lineEdit->setText(tmp);
+    lineEdit->setText(tmp);
 }
 
 void QRenameDialog::delLineEdit()
 {
     QString tmp;
-    tmp = ui->lineEdit->text();
+    tmp = lineEdit->text();
     if(tmp.isEmpty())
         return;
     tmp = tmp.remove(tmp.size() - 1,1);
-    ui->lineEdit->setText(tmp);
+    lineEdit->setText(tmp);
 }
 
 
@@ -77,7 +126,7 @@ void QRenameDialog::on_sureBtn_clicked()
 {
     foreach(QString name,currentlist->getListItemName())
     {
-        if(ui->lineEdit->text() + suffix == name)
+        if(lineEdit->text() + suffix == name)
         {
             QWarnTipsDialog *wtdlg = new QWarnTipsDialog(NULL,tr("123123213"));
             wtdlg->setWindowModality(Qt::WindowModal);
@@ -88,16 +137,16 @@ void QRenameDialog::on_sureBtn_clicked()
     }
 
     QIconWidget *item = currentlist->findChild<QIconWidget *>(currentlist->currentItem()->text());
-    QString newname = item->getIconPath().remove(item->returnItem()->text()) + ui->lineEdit->text() + suffix;
+    QString newname = item->getIconPath().remove(item->returnItem()->text()) + lineEdit->text() + suffix;
 
 
     if(QFile::rename(item->getIconPath(),newname))
     {
-        currentlist->changeListName(item->returnItem()->text(),ui->lineEdit->text() + suffix);
-        item->setName(ui->lineEdit->text() + suffix);
-        item->setObjectName(ui->lineEdit->text() + suffix);
+        currentlist->changeListName(item->returnItem()->text(),lineEdit->text() + suffix);
+        item->setName(lineEdit->text() + suffix);
+        item->setObjectName(lineEdit->text() + suffix);
         item->setIconPath(newname);
-        item->returnItem()->setText(ui->lineEdit->text() + suffix);
+        item->returnItem()->setText(lineEdit->text() + suffix);
 
         emit changeName();
     }
@@ -114,8 +163,8 @@ void QRenameDialog::on_cancelBtn_clicked()
 
 void QRenameDialog::check_lineEdit()
 {
-    if(ui->lineEdit->text().isEmpty())
-        ui->sureBtn->setEnabled(false);
+    if(lineEdit->text().isEmpty())
+        sureBtn->setEnabled(false);
     else
-        ui->sureBtn->setEnabled(true);
+        sureBtn->setEnabled(true);
 }

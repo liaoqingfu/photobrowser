@@ -3,7 +3,7 @@
 QKeyBoardBtn::QKeyBoardBtn(QWidget *parent) :
     QPushButton(parent)
 {
-    this->setStyleSheet("QPushButton{background-color: blue; \
+    this->setStyleSheet("QPushButton{background-color:  rgb(59, 61, 66, 100); \
                         color: white; \
                         border-radius: 10px; \
                         border: 2px groove gray;\

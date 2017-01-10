@@ -32,12 +32,11 @@ QShowImageWidget::QShowImageWidget(QWidget *parent, QImageListWidget *list) :
     smallfont.setPixelSize(18);
     smallfont.setWeight(3);
     zoomlabel = new QLabel(this);
-    zoomlabel->move(10,430);
+    zoomlabel->move(10,450);
     zoomlabel->setFont(smallfont);
     zoomlabel->resize(100,30);
     zoomlabel->setStyleSheet("background-color:transparent;color:yellow;");
     zoomlabel->setText(tr("Zoom ") + QString::number(zoomnum,'g',2) + tr("X"));
-    zoomlabel->setStyleSheet("background-color:transparent;color:yellow;");
 
     videologolabel = new QLabel(this);
     videologolabel->resize(120,120);
@@ -61,19 +60,20 @@ QShowImageWidget::QShowImageWidget(QWidget *parent, QImageListWidget *list) :
         isVideo = true;
     }
     else
-        backgroundpixmap.load(currentlist->getCurrentPath() + tr("/") + currentlist->currentItem()->text());
-
+        backgroundpixmap.load(currentlist->getCurrentPath() + QString("/") + currentlist->currentItem()->text());
 }
 
 QShowImageWidget::~QShowImageWidget()
 {
+    delete rgbframe;
+    delete videologolabel;
     delete zoomlabel;
     delete numberlabel;
     delete filenamelabel;
 }
 
 
-//keyevent
+//键盘事件
 void QShowImageWidget::keyPressEvent(QKeyEvent *e)
 {
     if(e->key() == Qt::Key_Up)
@@ -146,7 +146,10 @@ void QShowImageWidget::keyPressEvent(QKeyEvent *e)
     {
         if(isVideo)
         {
-
+            QString videopath =currentlist->getCurrentPath() + tr("/") + currentlist->currentItem()->text();
+            QVideoBrowser *w =new QVideoBrowser(NULL,videopath);
+            w->setWindowModality(Qt::ApplicationModal);
+            w->show();
         }
     }
     else if(e->key() == Qt::Key_O)
@@ -163,6 +166,7 @@ void QShowImageWidget::keyPressEvent(QKeyEvent *e)
 }
 
 
+//切换图像模式
 void QShowImageWidget::switchImageMode()
 {
     if(currentlist->count() == 0)
@@ -201,10 +205,9 @@ void QShowImageWidget::switchImageMode()
 
 }
 
-
+//画布事件
 void QShowImageWidget::paintEvent(QPaintEvent *e)
 {
-
     QPainter p(this);
 
     if(!isVideo)
@@ -224,7 +227,7 @@ void QShowImageWidget::paintEvent(QPaintEvent *e)
 }
 
 
-
+//菜单列表
 void QShowImageWidget::optImageListFile(int mode ,QListWidget *list)
 {
     QImageListWidget *currentlist = (QImageListWidget *)list;
@@ -245,7 +248,7 @@ void QShowImageWidget::optImageListFile(int mode ,QListWidget *list)
     {
         QDeleteDialog *ddlg = new QDeleteDialog(this,currentlist);
         ddlg->setWindowModality(Qt::WindowModal);
-         connect(ddlg,SIGNAL(deleteItem()),this,SLOT(switchImageMode()));
+        connect(ddlg,SIGNAL(deleteItem()),this,SLOT(switchImageMode()));
         ddlg->move((this->width() - ddlg->width())/2 , (this->height() - ddlg->height())/2);
         ddlg->exec();
 
@@ -257,8 +260,8 @@ void QShowImageWidget::optImageListFile(int mode ,QListWidget *list)
     }
 }
 
-
+//改变图像名称
 void QShowImageWidget::changeImageName()
 {
-     filenamelabel->setText(currentlist->currentItem()->text());
+    filenamelabel->setText(currentlist->currentItem()->text());
 }

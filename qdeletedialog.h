@@ -29,7 +29,9 @@ private slots:
     void on_cancelBtn_clicked();
 
 private:
-    Ui::QDeleteDialog *ui;
+    QLabel *label;
+    QPushButton *sureBtn;
+    QPushButton *cancelBtn;
 
     QImageListWidget *currentlist;
 };

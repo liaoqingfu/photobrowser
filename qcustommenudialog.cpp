@@ -10,8 +10,7 @@ QCustomMenuDialog::QCustomMenuDialog(QWidget *parent,QImageListWidget *list):
     listnum = 2;
     currentnum = 0;
 
-
-    QLabel *renamebtn = new QLabel("rename");
+    QLabel *renamebtn = new QLabel("重命名");
     renamebtn->setObjectName(QString::number(0));
     renamebtn->setFixedSize(160,60);
     renamebtn->setAlignment(Qt::AlignCenter);
@@ -25,7 +24,7 @@ QCustomMenuDialog::QCustomMenuDialog(QWidget *parent,QImageListWidget *list):
 
     if(currentlist->getDirSeies() == 3)
     {
-        QLabel *deletebtn = new QLabel("delete");
+        QLabel *deletebtn = new QLabel("删除");
         deletebtn->setObjectName(QString::number(1));
         deletebtn->setFixedSize(160,60);
         deletebtn->setAlignment(Qt::AlignCenter);
@@ -36,7 +35,7 @@ QCustomMenuDialog::QCustomMenuDialog(QWidget *parent,QImageListWidget *list):
     }
     else
     {
-        QLabel *createbtn = new QLabel("create NEW");
+        QLabel *createbtn = new QLabel("新建文件夹");
         createbtn->setObjectName(QString::number(1));
         createbtn->setFixedSize(160,60);
         createbtn->setAlignment(Qt::AlignCenter);

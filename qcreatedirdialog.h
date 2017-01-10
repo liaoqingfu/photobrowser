@@ -3,15 +3,16 @@
 
 #include <QDialog>
 #include <QDir>
+#include <QHBoxLayout>
+#include<QVBoxLayout>
+#include<QLineEdit>
 #include <qtimer.h>
 #include <QListWidget>
 #include <QListWidgetItem>
 #include <qimagelistwidget.h>
 #include <qwarntipsdialog.h>
+#include <keyboardform.h>
 
-namespace Ui {
-class QCreateDirDialog;
-}
 
 class QCreateDirDialog : public QDialog
 {
@@ -33,7 +34,11 @@ private slots:
     void check_lineEdit();
 
 private:
-    Ui::QCreateDirDialog *ui;
+    QLabel *tittle;
+    QPushButton *sureBtn;
+    QPushButton *cancelBtn;
+    QLineEdit *lineEdit;
+    KeyBoardForm *keyboard;
 
     QImageListWidget *currentlist;
 
