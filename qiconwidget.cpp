@@ -12,9 +12,21 @@ QIconWidget::QIconWidget(QWidget *parent,int num,QString filename,QString path) 
     videosuffix = filename.right(4);
     isStates = Hide;
 
+    //文件名字
+     this->filename = filename;
+
+    QString filenum;
+
+    if(num < 10)
+      filenum = "00" + QString::number(num);
+    else if(num < 100)
+      filenum = "0" + QString::number(num);
+    else
+      filenum =  QString::number(num);
+
     //存放图片项目
-    item = new QListWidgetItem(filename,(QListWidget *)parent);
-    this->setObjectName(filename);
+    item = new QListWidgetItem(filenum,(QListWidget *)parent);
+    this->setObjectName(filenum);
 
     //设置项目大小
     item->setTextColor(QColor(255,255,255));
@@ -49,9 +61,9 @@ QIconWidget::QIconWidget(QWidget *parent,int num,QString filename,QString path) 
     checkstate->setFixedSize(35,35);
     checkstate->setStyleSheet("background: transparent;");
     checkstate->move(10,20);
-    checkstate->show();
+    checkstate->hide();
 
-    //图片标示
+    //图片标识
     videostate = new QLabel(this);
     videostate->setFixedSize(30,15);
     videostate->setStyleSheet("background: transparent;border-image: url(:/images/video.ico);");
@@ -63,6 +75,10 @@ QIconWidget::QIconWidget(QWidget *parent,int num,QString filename,QString path) 
         videostate->show();
     }
 
+    defaultdirlabel = new QLabel(this);
+    defaultdirlabel->setFixedSize(35,35);
+    defaultdirlabel->setStyleSheet("background: transparent;border-image: url(:/images/check.png);");
+    defaultdirlabel->hide();
 }
 
 QIconWidget::~QIconWidget()
@@ -83,6 +99,7 @@ void QIconWidget::setBorderColor(QString sheet)
 void QIconWidget::setName(QString name)
 {
     namelabel->setText(name);
+    this->setFileName(name);
 }
 
 //设置图片
@@ -127,5 +144,18 @@ void QIconWidget::setCheckState(IconStates state)
     {
         isStates = Hide;
         checkstate->setStyleSheet("background: transparent;");
+    }
+}
+
+//设置目录标志
+void QIconWidget::setDirState(DirStates state)
+{
+    if(state == Show)
+    {
+        defaultdirlabel->show();
+    }
+    else if(state == Hiden)
+    {
+       defaultdirlabel->hide();
     }
 }

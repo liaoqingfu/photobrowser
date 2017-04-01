@@ -1,6 +1,6 @@
-#ifndef GLPLAYWIDGET_H
+#ifndef QPLAYWIDGET_H
 
-#define GLPLAYWIDGET_H
+#define QPLAYWIDGET_H
 
 #include <QOpenGLWidget>
 
@@ -15,13 +15,12 @@
 
 #include <QtDebug>
 
-//#include "GLES2/gl2.h"
 
 #define ATTRIB_VERTEX 3
 
 #define ATTRIB_TEXTURE 4
 
-class CPlayWidget:public QOpenGLWidget,protected QOpenGLFunctions
+class QPlayWidget:public QOpenGLWidget,protected QOpenGLFunctions
 
 {
 
@@ -29,11 +28,13 @@ class CPlayWidget:public QOpenGLWidget,protected QOpenGLFunctions
 
 public:
 
-    CPlayWidget(QWidget* parent);
+    QPlayWidget(QWidget* parent,int width = 0,int height = 0);
 
-    ~CPlayWidget();
+    ~QPlayWidget();
 
     void PlayOneFrame(unsigned char *yuv);
+
+    bool isPause;
 
 
 protected:
@@ -70,13 +71,16 @@ private:
 
     QOpenGLShaderProgram *m_pShaderProgram; //着色器程序容器
 
-    int m_nVideoW; //视频分辨率宽
+    //int m_nVideoW; //视频分辨率宽
 
-    int m_nVideoH; //视频分辨率高
+    //int m_nVideoH; //视频分辨率高
 
     unsigned char* m_pBufYuv420p;   
 
-    //FILE* m_pYuvFile;
+    int m_frame_width;
+
+    int m_frame_height;
+
 };
 
 #endif

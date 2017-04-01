@@ -1,7 +1,7 @@
 #include "qimagebrowser.h"
 
 QMutex mutex;
-
+extern QString defaultDir;
 QImageBrowser::QImageBrowser(QWidget *parent) :
     QWidget(parent)
 {
@@ -9,31 +9,31 @@ QImageBrowser::QImageBrowser(QWidget *parent) :
     this->initLayout();
 
     //设置TF卡路径
-    rootPath = tr("/mnt");
-
-    //初始化串口
-    serial = new Master(this);
-    serial->InitForm();
-    serial->writeRocker(SLAVE_Y);
-
-
-    //摇杆使用者
-    connect(serial,SIGNAL(sendRockerInfo(QString)),this,SLOT(getRockerUser(QString)));
-    //摇杆X/Y值
-    connect(serial,SIGNAL(sendRockerXYInfo(QString,QString)),this,SLOT(getRockerXY(QString,QString)));
-    connect(serial,SIGNAL(sendKeyInfo(QString)),this,SLOT(getKeyValues(QString)));
-
+    rootPath = tr("/mnt/sdcard/");
 
     //线程监控
     imageWatcher = new QFutureWatcher<QImage>(this);
     //图片动态加载
     connect(imageWatcher,SIGNAL(resultReadyAt(int)), this, SLOT(showImage(int)));
 
-    //判断TF路径是否为空
-    if(!rootPath.isEmpty())
+    //查找sd卡定时器
+    timer = new QTimer(this);
+    connect(timer,SIGNAL(timeout()),this,SLOT(findSdDir()));
+    timer->start(500);
+}
+
+
+//查找SD卡
+void QImageBrowser::findSdDir()
+{
+    //判断是否为空
+    QFile devfile("/dev/mmcblk0p1");
+    if(devfile.exists())
         this->findDirs(rootPath,yearListWidget);
 
+    timer->stop();
 }
+
 
 //初始化布局
 void QImageBrowser::initLayout()
@@ -43,50 +43,35 @@ void QImageBrowser::initLayout()
 
     QFont font;
     font.setPixelSize(30);
-    //font.setBold(true);
 
     tiltlelabel = new QLabel ;
     tiltlelabel->setFixedHeight(50);
     tiltlelabel->setStyleSheet("color: rgb(255, 255, 255);background-color: rgb(68, 119, 180);");
     tiltlelabel->setFont(font);
-    tiltlelabel->setText("  图像浏览");
-
+    tiltlelabel->setText(tr("  图像浏览"));
 
     tabWidget = new QTabWidget;
-    tabWidget->setStyleSheet("QTabWidget::pane{border: 1px;}"
-                             "QTabWidget::tab-bar{alignment:left;}"
-                             "QTabBar::tab{font-size: 16px;margin-left:1;background:rgb(255, 255, 255, 100); color:black; min-width:10ex; min-height:5ex;}"
-                             "QTabBar::tab:hover{background:rgb(59, 61, 66, 100);}"
-                             "QTabBar::tab:selected{border-color: white;background:white;color:black;}");
-
+    tabWidget->setStyleSheet("QTabWidget::pane{border: 1px;}QTabWidget::tab-bar{alignment:left;}\
+                             QTabBar::tab{font-size: 16px;margin-left:1;background:rgb(255, 255, 255, 100); color:black; min-width:10px; min-height:5px;}\
+                             QTabBar::tab:hover{background:rgb(59, 61, 66, 100);}\
+                             QTabBar::tab:selected{border-color: white;background:white;color:black;}");
 
 
     //年路径目录列表
     yearListWidget = new QImageListWidget;
+    connect(yearListWidget,SIGNAL(closeTabList()),this,SLOT(closeTabListWidget()));
+    yearListWidget->setFixedSize(640,380);
     yearListWidget->setDirSeries(0);//设置为0级目录
 
-    //月路径目录列表
-    monthListWidget = new QImageListWidget;
-    monthListWidget->setDirSeries(1);//设置为1级目录
-
-    //日路径目录列表
-    dayListWidget = new QImageListWidget;
-    dayListWidget->setDirSeries(2);//设置为2级目录
 
     //日路径目录列表
     picListWidget = new QImageListWidget;
-    picListWidget->setDirSeries(3);//设置为3级目录
+    connect(picListWidget,SIGNAL(closeTabList()),this,SLOT(closeTabListWidget()));
+    picListWidget->setFixedSize(640,380);
+    picListWidget->setDirSeries(1);//设置为1级目录
 
     //开启菜单
     connect(yearListWidget,SIGNAL(clickselectList(QImageListWidget*)),
-            this,SLOT(openCustomMenu(QImageListWidget*)));
-
-    //开启菜单
-    connect(monthListWidget,SIGNAL(clickselectList(QImageListWidget*)),
-            this,SLOT(openCustomMenu(QImageListWidget*)));
-
-    //开启菜单
-    connect(dayListWidget,SIGNAL(clickselectList(QImageListWidget*)),
             this,SLOT(openCustomMenu(QImageListWidget*)));
 
     //开启菜单
@@ -98,20 +83,11 @@ void QImageBrowser::initLayout()
             this,SLOT(yearListClicked(QListWidgetItem*)));
 
     //点击目录
-    connect(monthListWidget,SIGNAL(itemClicked(QListWidgetItem*)),
-            this,SLOT(monthListClicked(QListWidgetItem*)));
-
-    //点击目录
-    connect(dayListWidget,SIGNAL(itemClicked(QListWidgetItem*)),
-            this,SLOT(dayListClicked(QListWidgetItem*)));
-
-    //点击目录
     connect(picListWidget,SIGNAL(itemClicked(QListWidgetItem*)),
             this,SLOT(picListCLicked(QListWidgetItem*)));
 
     tabWidget->tabBar()->setFocusPolicy(Qt::NoFocus);
     tabWidget->addTab(yearListWidget,tr("根目录"));
-
 
     QVBoxLayout *layout = new QVBoxLayout;
     layout->setContentsMargins(0,0,0,9);
@@ -120,27 +96,31 @@ void QImageBrowser::initLayout()
     layout->addSpacing(7);
     this->setLayout(layout);
 
+    isOpenMenu = false;
+    isOptMenu = false;
+    isOpenImage = false;
+
 }
 
 QImageBrowser::~QImageBrowser()
 {
-    imageWatcher->cancel();
-    imageWatcher->waitForFinished();
+    delete timer;
+    delete imageWatcher;
     delete yearListWidget;
-    delete monthListWidget;
-    delete dayListWidget;
     delete picListWidget;
 
 }
 
-
 //搜索目录
 void QImageBrowser::findDirs(QString path,QImageListWidget *listWidget)
 {
-    if(imageWatcher->isRunning())
+    QFile file(tr("/home/root/cfg/dir_cfg.txt"));
+    QString defaultDirName ;
+
+    if(file.exists())
     {
-        imageWatcher->cancel();
-        imageWatcher->waitForFinished();
+        QReadWriteFile readFile;
+        defaultDirName  = readFile.readFile(tr("/home/root/cfg/dir_cfg.txt"));
     }
 
     int i = 0;
@@ -150,12 +130,21 @@ void QImageBrowser::findDirs(QString path,QImageListWidget *listWidget)
     QFileInfoList list = dir.entryInfoList(QDir::NoDotAndDotDot | QDir::Dirs);
 
     foreach (QFileInfo info,list) {
-
         //载入目录文件夹
         QIconWidget *iconitem = new QIconWidget(listWidget,i,info.fileName(),info.absoluteFilePath());
+
+        if(info.fileName() ==  defaultDirName)
+        {
+            iconitem->setDirState(QIconWidget::Show);
+        }
+        else
+        {
+            iconitem->setDirState(QIconWidget::Hiden);
+        }
+
         iconitem->setIcon(pixmap.scaled(QSize(WICONSIZE,HICONSIZE)));
         listWidget->setItemWidget(iconitem->returnItem(),iconitem);
-        listWidget->addListName(info.fileName());
+        listWidget->addListName(iconitem->objectName());
         i++;
     }
 
@@ -167,47 +156,24 @@ void QImageBrowser::findDirs(QString path,QImageListWidget *listWidget)
 //点击年目录
 void QImageBrowser::yearListClicked(QListWidgetItem *yearItem)
 {
-    tabWidget->addTab(monthListWidget,yearItem->text());
+     QIconWidget *pitem = this->findChild<QIconWidget *>(yearItem->text());
+    tabWidget->addTab(picListWidget,pitem->getFileName());
     tabWidget->setCurrentIndex(1);
-    secondPath = rootPath + tr("/") + yearItem->text();
-    this->findDirs(secondPath,monthListWidget);
-
+    secondPath = rootPath + tr("/") + pitem->getFileName();
+    // this->findDirs(secondPath,monthListWidget);
+    this->findFiles(secondPath);
 }
-
-//点击月目录
-void QImageBrowser::monthListClicked(QListWidgetItem *monthItem)
-{
-
-    tabWidget->addTab(dayListWidget,monthItem->text());
-    tabWidget->setCurrentIndex(2);
-    thirdPath = secondPath + tr("/") + monthItem->text();
-    this->findDirs(thirdPath,dayListWidget);
-}
-
-//点击日目录
-void QImageBrowser::dayListClicked(QListWidgetItem *dayItem)
-{
-
-    tabWidget->addTab(picListWidget,dayItem->text());
-    tabWidget->setCurrentIndex(3);
-    fourPath = thirdPath + tr("/") + dayItem->text();
-    picListWidget->clear();
-    this->findFiles(fourPath);
-}
-
-
-
 
 //图片回调函数
 QImage scale(QString imageFileName)
 {
-    if( (imageFileName.right(3) == "avi") || (imageFileName.right(3) == "mkv") )
+    if(imageFileName.right(3) == "avi")
     {
         mutex.lock();
 
         //获取视频缩略图
-        unsigned char rgbframe[WICONSIZE*HICONSIZE*3];
-        if(-1 == get_Video_Frame(imageFileName.toLocal8Bit().data(),rgbframe,WICONSIZE,HICONSIZE))
+        unsigned char rgbframe[WICONSIZE*HICONSIZE*3/4];
+        if(-1 == get_Video_Frame(imageFileName.toLocal8Bit().data(),rgbframe,WICONSIZE/2,HICONSIZE/2))
         {
             qDebug()<<"-1";
             QFile file(imageFileName);
@@ -216,10 +182,11 @@ QImage scale(QString imageFileName)
             return QImage("");
         }
         mutex.unlock();
-        return  QImage(rgbframe,WICONSIZE,HICONSIZE,QImage::Format_RGB888);
+        return  QImage(rgbframe,WICONSIZE/2,HICONSIZE/2,QImage::Format_RGB888).scaled(QSize(WICONSIZE,HICONSIZE),
+                                                                                       Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
     }
 
-    //获取视频缩略图
+    //获取图片缩略图
     QImage image(imageFileName);
     return image.scaled(QSize(WICONSIZE,HICONSIZE),
                         Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
@@ -251,7 +218,7 @@ void QImageBrowser::findFiles(QString path)
         //载入图片视频
         QIconWidget *iconitem = new QIconWidget(picListWidget,i,info.fileName(),info.absoluteFilePath());
         picListWidget->setItemWidget(iconitem->returnItem(),iconitem);
-        picListWidget->addListName(info.fileName());
+        picListWidget->addListName(iconitem->objectName());
         i++;
     }
     picListWidget->setCurrentPath(path);
@@ -264,8 +231,11 @@ void QImageBrowser::findFiles(QString path)
 //显示图片浏览
 void QImageBrowser::showImage(int num)
 {
+    QIconWidget *pitem = picListWidget->findChild<QIconWidget *>(picListWidget->item(num)->text());
 
-    QIconWidget *pitem = this->findChild<QIconWidget *>(picListWidget->item(num)->text());
+    if(pitem == NULL)
+        return;
+
     pitem->setIcon(QPixmap::fromImage(imageWatcher->resultAt(num)));
 }
 
@@ -276,82 +246,209 @@ void QImageBrowser::picListCLicked(QListWidgetItem *picItem)
     {
         return;
     }
+    isOpenImage = true;
+
     QImageListWidget * list= (QImageListWidget *)picItem->listWidget();
 
-    QShowImageWidget *displaydlg = new QShowImageWidget(NULL,list);
+    displaydlg = new QShowImageWidget(NULL,list);
     displaydlg->setWindowModality(Qt::WindowModal);
-    displaydlg->move((this->width() - displaydlg->width())/2 , (this->height() - displaydlg->height())/2);
+    connect(displaydlg,SIGNAL(closeWidget()),this,SLOT(closeImageBrowser()));
+    connect(this,SIGNAL(sendKey(int)),displaydlg,SLOT(getKeyEvent(int)));
+    displaydlg->move(0,0);
     displaydlg->show();
 }
 
 
 //键盘事件
-void QImageBrowser::keyPressEvent(QKeyEvent *e)
+void QImageBrowser::getKeyEvent(int key)
 {
-    //返回操作
-    if(e->key() == Qt::Key_Enter)
+    QKeyEvent rekey(QEvent::KeyPress,key,Qt::NoModifier);
+
+    if(isOpenMenu)//开启菜单
     {
-        int index =tabWidget->currentIndex();
-        if( index != 0)
+        if(isOptMenu)//操作菜单
         {
-            tabWidget->removeTab(index);//删除表头
+            emit sendKey(key);
         }
         else
         {
-            this->close();
+            QCoreApplication::sendEvent(dlg,&rekey);
         }
     }
-    else if(e->key() == Qt::Key_O)
+    else if(isOpenImage)//打开图像
     {
-
+        emit sendKey(key);
     }
+    else{//点击列表
 
-    QWidget::keyPressEvent(e);
+       // qDebug()<<"list key";
+        if(tabWidget->currentIndex() == 0)
+        {
+            QCoreApplication::sendEvent(yearListWidget,&rekey);
+        }
+        else if(tabWidget->currentIndex() == 1){
+
+            QCoreApplication::sendEvent(picListWidget,&rekey);
+        }
+    }
 }
-
 
 //开启菜单
 void QImageBrowser::openCustomMenu(QImageListWidget *list)
 {
-    QCustomMenuDialog *dlg = new QCustomMenuDialog(this,list);
+    if((list->count() == 0) || isOpenMenu)
+        return;
+
+    isOpenMenu = true;
+    dlg = new QCustomMenuDialog(this,list);
     dlg->setWindowModality(Qt::WindowModal);
     connect(dlg,SIGNAL(optImageFile(int,QListWidget*)),this,SLOT(optImageListFile(int,QListWidget*)));
+    connect(dlg,SIGNAL(closeWidget()),this,SLOT(closeCustomMenu()));
     dlg->move((this->width() - dlg->width())/2 , (this->height() - dlg->height())/2);
-    dlg->exec();
+    dlg->show();
+
+}
+
+//关闭菜单栏
+void QImageBrowser::closeCustomMenu()
+{
+    isOpenMenu = false;
+    //delete dlg;
+}
+
+//关闭菜单
+void QImageBrowser::closeOptCreateMenu()
+{
+    disconnect(this,SIGNAL(sendKey(int)),cdlg,SLOT(getKeyEvent(int)));
+    disconnect(cdlg,SIGNAL(closeWidget()),this,SLOT(closeOptCreateMenu()));
+    isOptMenu = false;
+    delete cdlg;
+}
+
+//关闭删除菜单
+void QImageBrowser::closeOptDeleteMenu()
+{
+    disconnect(this,SIGNAL(sendKey(int)),ddlg,SLOT(getKeyEvent(int)));
+    disconnect(ddlg,SIGNAL(closeWidget()),this,SLOT(closeOptDeleteMenu()));
+    isOptMenu = false;
+    delete ddlg;
+    qDebug()<<"close delete";
+}
+
+//关闭重命名菜单
+void QImageBrowser::closeOptRenameMenu()
+{
+    disconnect(this,SIGNAL(sendKey(int)),rdlg,SLOT(getKeyEvent(int)));
+    disconnect(rdlg,SIGNAL(closeWidget()),this,SLOT(closeOptRenameMenu()));
+    isOptMenu = false;
+    delete rdlg;
+
+}
+
+//关闭图像浏览
+void QImageBrowser::closeImageBrowser()
+{
+    disconnect(displaydlg,SIGNAL(closeWidget()),this,SLOT(closeImageBrowser()));
+    disconnect(this,SIGNAL(sendKey(int)),displaydlg,SLOT(getKeyEvent(int)));
+    isOpenImage = false;
+}
+
+//关闭列表
+void QImageBrowser::closeTabListWidget()
+{
+
+    int index =tabWidget->currentIndex();
+    if( index != 0)
+    {
+
+        if(imageWatcher->isRunning())
+        {
+            imageWatcher->cancel();
+            imageWatcher->waitForFinished();
+        }
+
+        picListWidget->deleteListWidget();
+        tabWidget->removeTab(index);//删除表头
+    }
+    else
+    {
+        yearListWidget->deleteListWidget();
+        this->close();
+        return;
+    }
+
+}
+
+//关闭事件
+void QImageBrowser::closeEvent(QCloseEvent *)
+{
+    emit closeWidget();
 }
 
 //菜单栏操作
 void QImageBrowser::optImageListFile(int mode ,QListWidget *list)
 {
+    qDebug()<<"optMenu";
     QImageListWidget *currentlist = (QImageListWidget *)list;
+
+    if((currentlist->count() == 0) || isOptMenu)
+        return;
+
+    isOptMenu = true;
 
     switch (mode) {
     case 0:
     {
-
-        QRenameDialog *rdlg = new QRenameDialog(this,currentlist);
+        rdlg = new QRenameDialog(NULL,currentlist);
         rdlg->setWindowModality(Qt::WindowModal);
+        connect(this,SIGNAL(sendKey(int)),rdlg,SLOT(getKeyEvent(int)));
+        connect(rdlg,SIGNAL(closeWidget()),this,SLOT(closeOptRenameMenu()));
         rdlg->move((this->width() - rdlg->width())/2 , (this->height() - rdlg->height())/2);
-        rdlg->exec();
+        rdlg->show();
 
     }
         break;
     case 1:
     {
-        if(currentlist->getDirSeies() == 3)
-        {
-            QDeleteDialog *ddlg = new QDeleteDialog(this,currentlist);
+            ddlg = new QDeleteDialog(NULL,currentlist);
             ddlg->setWindowModality(Qt::WindowModal);
+            connect(this,SIGNAL(sendKey(int)),ddlg,SLOT(getKeyEvent(int)));
+            connect(ddlg,SIGNAL(closeWidget()),this,SLOT(closeOptDeleteMenu()));
             ddlg->move((this->width() - ddlg->width())/2 , (this->height() - ddlg->height())/2);
-            ddlg->exec();
-        }
-        else
-        {
-            QCreateDirDialog *cdlg = new QCreateDirDialog(this,currentlist);
+            ddlg->show();
+    }
+        break;
+    case 2:
+    {
+            cdlg = new QCreateDirDialog(NULL,currentlist);
             cdlg->setWindowModality(Qt::WindowModal);
+            connect(this,SIGNAL(sendKey(int)),cdlg,SLOT(getKeyEvent(int)));
+            connect(cdlg,SIGNAL(closeWidget()),this,SLOT(closeOptCreateMenu()));
             cdlg->move((this->width() - cdlg->width())/2 , (this->height() - cdlg->height())/2);
-            cdlg->exec();
+            cdlg->show();
+
+    }
+        break;
+    case 3:
+    {
+
+        foreach (QString itemname, currentlist->getListItemName()) {
+
+            QIconWidget *item = currentlist->findChild<QIconWidget *>(itemname);
+            if(itemname == currentlist->currentItem()->text())
+            {
+                item->setDirState(QIconWidget::Show);
+                QReadWriteFile writeFile;
+                writeFile.writeFile(tr("/home/root/cfg/dir_cfg.txt"),item->getFileName());
+                defaultDir = item->getFileName();
+            }
+            else
+            {
+                item->setDirState(QIconWidget::Hiden);
+            }
         }
+
+        isOptMenu = false;
     }
         break;
 
@@ -360,107 +457,3 @@ void QImageBrowser::optImageListFile(int mode ,QListWidget *list)
     }
 }
 
-
-//获取按键值
-
-void QImageBrowser::getKeyValues(QString value)
-{
-    switch (value.toInt(NULL,16)) {
-    case MAIN_UP_KEY:
-        emit sendKey(Qt::Key_F);
-        break;
-
-    case MAIN_LEFT_KEY:
-        emit sendKey(Qt::Key_S);
-        break;
-
-    case MAIN_DOWN_KEY:
-        emit sendKey(Qt::Key_Return);
-        break;
-
-    case MAIN_RIGHT_KEY:
-        emit sendKey(Qt::Key_R);
-        break;
-
-    case MAIN_OK_KEY:
-        emit sendKey(Qt::Key_M);
-        break;
-
-    case MAIN_UP_LONG_KEY:
-        break;
-
-    case MAIN_LEFT_LONG_KEY:
-        break;
-
-    case MAIN_DOWN_LONG_KEY:
-        break;
-
-    case MAIN_RIGHT_LONG_KEY:
-        break;
-
-    case MAIN_OK_LONG_KEY:
-        break;
-
-    case MAIN_NONE_KEY:
-        break;
-
-    default:
-        break;
-    }
-
-}
-
-
-//获取摇杆使用者
-void QImageBrowser::getRockerUser(QString user)
-{
-    if(user == MASTER_Y)
-    {
-        serial->curRockerUser = MASTER_Y;
-    }
-
-    if(user == SLAVE_Y)
-    {
-        serial->curRockerUser = SLAVE_Y;
-    }
-}
-
-//获取摇杆XY值
-void QImageBrowser::getRockerXY(QString x,QString y)
-{
-    int x1,y1;
-    x1 = x.toInt(NULL,16) - CENTER_X;
-    y1 = y.toInt(NULL,16) - CENTER_Y;
-    if(qAbs(x1) >= qAbs(y1))
-    {
-        if(qAbs(x1) > X_MIN_STEP)
-        {
-            if(x1 > 0)
-            {
-                qDebug()<<"RIGHT";
-                emit sendKey(Qt::Key_Right);
-            }
-            else
-            {
-                qDebug()<<"LEFT";
-                emit sendKey(Qt::Key_Left);
-            }
-        }
-    }
-    else
-    {
-        if(qAbs(y1) > Y_MIN_STEP)
-        {
-            if(y1 > 0)
-            {
-                qDebug()<<"UP";
-                emit sendKey(Qt::Key_Up);
-            }
-            else
-            {
-                qDebug()<<"Down";
-                emit sendKey(Qt::Key_Down);
-            }
-        }
-    }
-}

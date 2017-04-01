@@ -1,14 +1,21 @@
 ﻿#include "videodec.h"
 
 //QMutex mutex;//生成缩略图线程锁
+extern int CAM_WIDTH;
+extern int CAM_HEIGHT;
 
 VideoDec::VideoDec(QObject *parent, QString name) :
     QThread(parent)
 {
     //注册类型
     qRegisterMetaType<PlayState >("PlayState");
+
     out_buffer = (uint8_t *)malloc(CAM_WIDTH * CAM_HEIGHT * 3 / 2);
     FileName = name ;
+
+    playTimer = new QTimer(this);
+    connect(playTimer,SIGNAL(timeout()),this,SLOT(play()));
+    playTimer->setInterval(1);
 }
 
 
@@ -17,7 +24,7 @@ VideoDec::~VideoDec()
     free(out_buffer);
 }
 
-
+//初始化视频
 void VideoDec::initVideo()
 {
 
@@ -46,8 +53,8 @@ void VideoDec::initVideo()
         secs %= 60;
         hours = mins/ 60;
         mins %= 60;
+        videoCountTime = ("%02d:%02d:%02d.%02d", hours, mins, secs, (100 * us) / AV_TIME_BASE);
         qDebug("%02d:%02d:%02d.%02d\n", hours, mins, secs, (100 * us) / AV_TIME_BASE);
-
     }
 
     for(int i=0; i<pFormatCtx->nb_streams; i++)
@@ -82,41 +89,38 @@ void VideoDec::initVideo()
     avpicture_fill((AVPicture *)pFrameRGB, out_buffer, AV_PIX_FMT_YUV420P,CAM_WIDTH, CAM_HEIGHT);
     pSWSCtx = sws_getContext(pCodecCtx->width, pCodecCtx->height, pCodecCtx->pix_fmt, CAM_WIDTH,CAM_HEIGHT, AV_PIX_FMT_YUV420P, SWS_BICUBIC, NULL, NULL, NULL);
 
-    isPlay = true;
-    isPause = false;
+    frameFinished = 1;
 
-    play();
+    playTimer->start();
 }
+
+//视频播放
 void VideoDec::play()
 {
-    int frameFinished = 1;
 
-    qDebug()<<"start play index"<<videoStream;
-
-    while(isPlay)
+    if(!(av_read_frame(pFormatCtx,&packet)>=0))
     {
-        QThread::msleep(1);\
-
-        if(isPause)
-        {
-            continue;
-        }
-
-        if(!(av_read_frame(pFormatCtx,&packet)>=0))
-        {
-            isPlay = false;
-            break;
-        }
-
-        if(packet.stream_index==videoStream)
-        {
-            avcodec_decode_video2(pCodecCtx, pFrame, &frameFinished,&packet);
-
-            sws_scale(pSWSCtx, pFrame->data, pFrame->linesize,0, pCodecCtx->height, pFrameRGB->data, pFrameRGB->linesize);
-
-            emit sendFrame(out_buffer);
-        }
+        closeVideo();
+        return;
     }
+
+    if(packet.stream_index==videoStream)
+    {
+        avcodec_decode_video2(pCodecCtx, pFrame, &frameFinished,&packet);
+
+        sws_scale(pSWSCtx, pFrame->data, pFrame->linesize,0, pCodecCtx->height, pFrameRGB->data, pFrameRGB->linesize);
+
+        emit sendFrame(out_buffer);
+    }
+
+    QApplication::processEvents();
+}
+
+//关闭视频
+void VideoDec::closeVideo()
+{
+    playTimer->stop();
+
     av_free_packet(&packet);
 
     //free RGB
@@ -132,11 +136,6 @@ void VideoDec::play()
     // close video file
     avformat_close_input(&pFormatCtx);
 
-    emit sendEndFlag(Finish);
-}
+    emit updatePlayState(Finish);
 
-
-void VideoDec::run()
-{
-    initVideo();
 }

@@ -5,12 +5,14 @@
 #include <QHBoxLayout>
 #include<QVBoxLayout>
 #include <QLineEdit>
+#include <QCoreApplication>
 #include <qtimer.h>
 #include <QListWidget>
 #include <QListWidgetItem>
-#include <qimagelistwidget.h>
-#include <qwarntipsdialog.h>
+#include <photobrowser/qimagelistwidget.h>
+#include <photobrowser/qwarntipsdialog.h>
 #include "keyboardform.h"
+#include "qkeyboardbtn.h"
 
 class QRenameDialog : public QDialog
 {
@@ -22,6 +24,11 @@ public:
 
 signals:
     void changeName();
+    void closeWidget();
+
+
+public slots:
+    void getKeyEvent(int key);
 
 private slots:
     void on_sureBtn_clicked();
@@ -34,19 +41,24 @@ private slots:
 
     void check_lineEdit();
 
+protected:
+    void closeEvent(QCloseEvent *);
+    void keyPressEvent(QKeyEvent *e);
+
 private:
 
     QLabel *tittle;
-    QPushButton *sureBtn;
-    QPushButton *cancelBtn;
+    QKeyBoardBtn *sureBtn;
+    QKeyBoardBtn *cancelBtn;
     QLineEdit *lineEdit;
     KeyBoardForm *keyboard;
 
     QImageListWidget *currentlist;
 
     QTimer *timer;
-
+    QString currentname;
     QString suffix;
+    bool isRename;
 };
 
 #endif // QRENAMEDIALOG_H

@@ -25,6 +25,8 @@ extern "C"
 };
 
 
+#define CLIP(value) (uint8_t)(((value)>0xFF)?0xff:(((value)<0)?0:(value)))
+
 //get frist frame of video
 int get_Video_Frame(char *filename,uint8_t *rgbframe,int dstw,int dsth)
 {
@@ -81,8 +83,8 @@ int get_Video_Frame(char *filename,uint8_t *rgbframe,int dstw,int dsth)
     //int numBytes=avpicture_get_size(AV_PIX_FMT_RGB24, pCodecCtx->width,pCodecCtx->height);
     //uint8_t *buffer=new uint8_t[numBytes];
     //AV_PIX_FMT_YUV420P
-    avpicture_fill((AVPicture *)pFrameRGB, rgbframe, AV_PIX_FMT_YUV420P,dstw, dsth);
-    SwsContext* pSWSCtx = sws_getContext(pCodecCtx->width, pCodecCtx->height, pCodecCtx->pix_fmt, dstw,dsth, AV_PIX_FMT_YUV420P, SWS_BICUBIC, NULL, NULL, NULL);
+    avpicture_fill((AVPicture *)pFrameRGB, rgbframe, AV_PIX_FMT_RGB24,dstw, dsth);
+    SwsContext* pSWSCtx = sws_getContext(pCodecCtx->width, pCodecCtx->height, pCodecCtx->pix_fmt, dstw,dsth, AV_PIX_FMT_RGB24, SWS_BICUBIC, NULL, NULL, NULL);
 
     int  i=0;
     int frameFinished = 0;
@@ -92,15 +94,13 @@ int get_Video_Frame(char *filename,uint8_t *rgbframe,int dstw,int dsth)
         if(packet.stream_index==videoStream)
         {
             avcodec_decode_video2(pCodecCtx, pFrame, &frameFinished,&packet);
-            //            if(frameFinished)
+
+            //            if(i == 10) // 这就是关键帧
             //            {
-            //                if(pFrame->key_frame==1) // 这就是关键帧
-            //                {
             sws_scale(pSWSCtx, pFrame->data, pFrame->linesize,0, pCodecCtx->height, pFrameRGB->data, pFrameRGB->linesize);
-            //                    i++;
-            //                }
-            //            }
             break;
+            //            }
+            //            i++;
         }
         av_free_packet(&packet);
     }
@@ -132,27 +132,31 @@ int crop_frame(uint8_t *dst,uint8_t *src,int top,int left,int srcwidth,int srche
     assert(src != NULL);
     assert(dst != NULL);
 
-    AVPicture srcpic,dstpic;
+    uint8_t *mid = (uint8_t*)malloc(cropwidth*cropheight*3/2);
+
+    AVPicture srcpic,midpic,dstpic;
 
     AVPixelFormat pixmat = AV_PIX_FMT_YUV420P;
 
     avpicture_fill(&srcpic,src,pixmat,srcwidth,srcheight);
-    avpicture_fill(&dstpic,dst,pixmat,cropwidth,cropheight);
+    avpicture_fill(&midpic,mid,pixmat,cropwidth,cropheight);
+    avpicture_fill(&dstpic,dst,pixmat,srcwidth,srcheight);
 
     int croplen = 0;
     int srclen = 0;
     //crop to y
     for(int y = 0;y < cropheight;y++)
     {
-        memcpy(dstpic.data[0] + y*cropwidth,srcpic.data[0] + (y + top)*srcwidth + left,cropwidth);
+        memcpy(midpic.data[0] + y*cropwidth,srcpic.data[0] + (y + top)*srcwidth + left,cropwidth);
     }
 
     croplen = cropwidth*cropheight;
     srclen = srcwidth*srcheight;
+
     //crop to u
     for(int y = 0;y < cropheight/2;y++)
     {
-        memcpy(dstpic.data[0] + croplen + y*cropwidth/2,srcpic.data[0] + srclen + (y + top/2)*srcwidth/2 + left/2,cropwidth/2);
+        memcpy(midpic.data[0] + croplen + y*cropwidth/2,srcpic.data[0] + srclen + (y + top/2)*srcwidth/2 + left/2,cropwidth/2);
     }
 
     croplen += cropwidth*cropheight/4;
@@ -161,15 +165,15 @@ int crop_frame(uint8_t *dst,uint8_t *src,int top,int left,int srcwidth,int srche
     //crop to v
     for(int y = 0;y < cropheight/2;y++)
     {
-        memcpy(dstpic.data[0] + croplen + y*cropwidth/2,srcpic.data[0] + srclen + (y + top/2)*srcwidth/2 + left/2,cropwidth/2);
+        memcpy(midpic.data[0] + croplen + y*cropwidth/2,srcpic.data[0] + srclen + (y + top/2)*srcwidth/2 + left/2,cropwidth/2);
     }
 
-    SwsContext *pSWSCtx = sws_getContext(cropwidth,cropheight,pixmat,srcwidth,srcheight,AV_PIX_FMT_YUV420P,SWS_BICUBIC,NULL,NULL,NULL);
+    SwsContext *pSWSCtx = sws_getContext(cropwidth,cropheight,pixmat,srcwidth,srcheight,AV_PIX_FMT_YUV420P,SWS_FAST_BILINEAR,NULL,NULL,NULL);
 
     //scale to srcsize
     if(pSWSCtx != NULL)
     {
-        sws_scale(pSWSCtx,dstpic.data,dstpic.linesize,0,cropheight,srcpic.data,srcpic.linesize);
+        sws_scale(pSWSCtx,midpic.data,midpic.linesize,0,cropheight,dstpic.data,dstpic.linesize);
         if(pSWSCtx)
         {
 
@@ -180,10 +184,13 @@ int crop_frame(uint8_t *dst,uint8_t *src,int top,int left,int srcwidth,int srche
     }
     else
     {
+        printf("pSWSCtx is NULL\n");
         sws_freeContext(pSWSCtx);
         pSWSCtx = NULL;
 
     }
+
+    free(mid);
 
 }
 
@@ -282,6 +289,66 @@ double max(double a,double b)
 }
 
 
+/*
+ * convert rgb24 to yu12
+ * args:
+ *   out: pointer to output buffer containing yu12 data
+ *   in: pointer to input buffer containing rgb24 data
+ *   width: picture width
+ *   height: picture height
+ *
+ * asserts:
+ *   out is not null
+ *   in is not null
+ *
+ * returns: none
+ */
+void rgb24_to_yu12(uint8_t *out, uint8_t *in, int width, int height)
+{
+    /*assertions*/
+    assert(out);
+    assert(in);
+
+    uint8_t *py = out;
+    uint8_t *pu = out + (width * height);
+    uint8_t *pv = pu + ((width * height) / 4);
+
+    uint8_t *in1 = in; //first line
+    uint8_t *in2 = in + (width * 3); //second line
+
+    int i=0;
+    for(i = 0; i < (width * height * 3); i += 3)
+    {
+        /* y */
+        *py++ =CLIP(0.299 * (in1[i] - 128) + 0.587 * (in1[i+1] - 128) + 0.114 * (in1[i+2] - 128) + 128);
+    }
+
+    int h = 0;
+    for(h = 0; h < height; h += 2)
+    {
+        in1 = in + (h * width * 3);
+        in2 = in1 + (width * 3);
+
+        for(i = 0; i < (width * 3); i += 6)
+        {
+            /* u v */
+            uint8_t u1 = CLIP(((- 0.147 * (in1[i] - 128) - 0.289 * (in1[i+1] - 128) + 0.436 * (in1[i+2] - 128) + 128) +
+                (- 0.147 * (in1[i+3] - 128) - 0.289 * (in1[i+4] - 128) + 0.436 * (in1[i+5] - 128) + 128))/2);
+            uint8_t v1 =CLIP(((0.615 * (in1[i] - 128) - 0.515 * (in1[i+1] - 128) - 0.100 * (in1[i+2] - 128) + 128) +
+                (0.615 * (in1[i+3] - 128) - 0.515 * (in1[i+4] - 128) - 0.100 * (in1[i+5] - 128) + 128))/2);
+
+            uint8_t u2 = CLIP(((- 0.147 * (in2[i] - 128) - 0.289 * (in2[i+1] - 128) + 0.436 * (in2[i+2] - 128) + 128) +
+                (- 0.147 * (in2[i+3] - 128) - 0.289 * (in2[i+4] - 128) + 0.436 * (in2[i+5] - 128) + 128))/2);
+            uint8_t v2 =CLIP(((0.615 * (in2[i] - 128) - 0.515 * (in2[i+1] - 128) - 0.100 * (in2[i+2] - 128) + 128) +
+                (0.615 * (in2[i+3] - 128) - 0.515 * (in2[i+4] - 128) - 0.100 * (in2[i+5] - 128) + 128))/2);
+
+            *pu++ = (u1 + u2) / 2;
+            *pv++ = (v1 + v2) / 2;
+        }
+    }
+}
+
+
 void YUV420ConvertImage(UCHAR *pYUV,LONG lYUVWidth,LONG lYUVHeight,LONG lBrightness,LONG lColorfulness,LONG lContrast)
 {
     UCHAR *pY = pYUV;
@@ -313,9 +380,9 @@ void YUV420ConvertImage(UCHAR *pYUV,LONG lYUVWidth,LONG lYUVHeight,LONG lBrightn
             dG = min(max(0, dG), 255);
             dB = min(max(0, dB), 255);
 
-/************************************************************************/
-/*          ÒÔÏÂŽúÂë¶ÔÁÁ¶ÈœøÐÐÐÞžÄ£¬ÐÞžÄÍê³ÉÖØÐÂŒÆËãYUVÖµ               */
-/************************************************************************/
+            /************************************************************************/
+            /*          ÒÔÏÂŽúÂë¶ÔÁÁ¶ÈœøÐÐÐÞžÄ£¬ÐÞžÄÍê³ÉÖØÐÂŒÆËãYUVÖµ               */
+            /************************************************************************/
             if(dR + lBrightness > 255)
             {
                 dR = 255;
@@ -355,14 +422,14 @@ void YUV420ConvertImage(UCHAR *pYUV,LONG lYUVWidth,LONG lYUVHeight,LONG lBrightn
                 dB += lBrightness;
             }
 
-//ÒÔÏÂÈýÐÐÊÇ×ÔŒº»»ËãµÄ¹«Êœ£¬»­ÃæÐ§¹ûÏà²îœÏŽó
-//              UCHAR lY = UCHAR(iY - 0.108 * iV + lBrightness + 13.75744) + 1;
-//              UCHAR lU = UCHAR(iU + 0.061 * iV -7.683) - 1;
-//              UCHAR lV = UCHAR(1.076 * iV -9.761) - 1;
+            //ÒÔÏÂÈýÐÐÊÇ×ÔŒº»»ËãµÄ¹«Êœ£¬»­ÃæÐ§¹ûÏà²îœÏŽó
+            //              UCHAR lY = UCHAR(iY - 0.108 * iV + lBrightness + 13.75744) + 1;
+            //              UCHAR lU = UCHAR(iU + 0.061 * iV -7.683) - 1;
+            //              UCHAR lV = UCHAR(1.076 * iV -9.761) - 1;
 
-/************************************************************************/
-/*                    ÒÔÏÂŽúÂë¶Ô¶Ô±È¶ÈœøÐÐÐÞžÄ                            */
-/************************************************************************/
+            /************************************************************************/
+            /*                    ÒÔÏÂŽúÂë¶Ô¶Ô±È¶ÈœøÐÐÐÞžÄ                            */
+            /************************************************************************/
             FLOAT fContrast = (FLOAT)lContrast;
             fContrast = 1.0;
 
@@ -384,15 +451,15 @@ void YUV420ConvertImage(UCHAR *pYUV,LONG lYUVWidth,LONG lYUVHeight,LONG lBrightn
                 dB= 255;
             }
 
-/************************************************************************/
-/*    ÒÔÏÂŽúÂë°ÑÍŒÏñ×ª»»Îª»ÒÉ«ÍŒÏñ£¬²»¹ýÊýŸÝÁ¿²»±äµÄÇé¿öÏÂ£¬ËÆºõÃ»Ê²ÃŽÒâÒå*/
-/*
+            /************************************************************************/
+            /*    ÒÔÏÂŽúÂë°ÑÍŒÏñ×ª»»Îª»ÒÉ«ÍŒÏñ£¬²»¹ýÊýŸÝÁ¿²»±äµÄÇé¿öÏÂ£¬ËÆºõÃ»Ê²ÃŽÒâÒå*/
+            /*
             iY = UCHAR(0.299 * dR + 0.587 * dG + 0.114 * dB);
             dR = iY;
             dG = iY;
             dB = iY;
 */
-/************************************************************************/
+            /************************************************************************/
 
             //RGB×ª»»ÎªYUV
             iY = UCHAR(0.299 * dR + 0.587 * dG + 0.114 * dB);

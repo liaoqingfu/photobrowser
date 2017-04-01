@@ -1,4 +1,4 @@
-#include "PlayWidgetcpy.h"
+#include "qplaywidget.h"
 
 #include <QOpenGLTexture>
 
@@ -6,9 +6,10 @@
 
 #include <QMouseEvent>
 
-CPlayWidget::CPlayWidget(QWidget *parent):QOpenGLWidget(parent)
 
+QPlayWidget::QPlayWidget(QWidget *parent,int width,int height):QOpenGLWidget(parent)
 {
+
     textureUniformY = 0;
 
     textureUniformU = 0;
@@ -37,34 +38,41 @@ CPlayWidget::CPlayWidget(QWidget *parent):QOpenGLWidget(parent)
 
     //m_pYuvFile = NULL;
 
-    m_nVideoH = 720;
+    //m_nVideoH = m_frame_height;
 
-    m_nVideoW = 1280;
+    //m_nVideoW = m_frame_width;
 
-    m_pBufYuv420p = (unsigned char *)malloc(sizeof(unsigned char) * m_nVideoH * m_nVideoW * 3 / 2);
+    m_pBufYuv420p = (unsigned char *)malloc(sizeof(unsigned char) * width * height * 3 / 2);
+    memset(m_pBufYuv420p,0,sizeof(unsigned char) * width * height * 3 / 2);
 
-  //  btn = new QPushButton(tr("close"),this);
- //   this->initializeGL();
+    isPause = false;
+
+
+    m_frame_width = width;
+
+    m_frame_height = height;
 
 }
 
-CPlayWidget::~CPlayWidget()
-
+QPlayWidget::~QPlayWidget()
 {
-
+    qDebug()<<"delete opengl";
+    // free(m_pBufYuv420p);
 }
 
-void CPlayWidget::PlayOneFrame(unsigned char *yuv)
+
+void QPlayWidget::PlayOneFrame(unsigned char *yuv)
 {
+
     m_pBufYuv420p = yuv;
+
     update();
 
     return;
 
 }
 
-void CPlayWidget::initializeGL()
-
+void QPlayWidget::initializeGL()
 {
 
     initializeOpenGLFunctions();
@@ -84,7 +92,7 @@ void CPlayWidget::initializeGL()
     //顶点着色器源码
 
     const char *vsrc = "attribute vec4 vertexIn; \
-    attribute vec2 textureIn; \
+            attribute vec2 textureIn; \
     varying vec2 textureOut;  \
     void main(void)           \
     {                         \
@@ -105,7 +113,7 @@ void CPlayWidget::initializeGL()
     //片段着色器源码
 
     const char *fsrc = "varying vec2 textureOut; \
-    uniform sampler2D tex_y; \
+            uniform sampler2D tex_y; \
     uniform sampler2D tex_u; \
     uniform sampler2D tex_v; \
     void main(void) \
@@ -174,7 +182,7 @@ void CPlayWidget::initializeGL()
     textureUniformV =  m_pShaderProgram->uniformLocation("tex_v");
 
     // 顶点矩阵
-/*
+    /*
     static const GLfloat vertexVertices[] = {
 
         -1.0f, -1.0f,
@@ -191,11 +199,11 @@ void CPlayWidget::initializeGL()
 
         -1.0f, -1.0f,
 
-         1.0f, -1.0f,
+        1.0f, -1.0f,
 
-         -1.0f, 1.0f,
+        -1.0f, 1.0f,
 
-         1.0f, 1.0f,
+        1.0f, 1.0f,
 
     };
 
@@ -255,13 +263,13 @@ void CPlayWidget::initializeGL()
 
     id_v = m_pTextureV->textureId();
 
-    glClearColor(1.0,1.0,0.0,0.0);//设置背景色
+    glClearColor(0.0,0.0,0.0,0.0);//设置背景色
 
     //qDebug("addr=%x id_y = %d id_u=%d id_v=%d\n", this, id_y, id_u, id_v);
 
 }
 
-void CPlayWidget::resizeGL(int w, int h)
+void QPlayWidget::resizeGL(int w, int h)
 
 {
 
@@ -279,10 +287,14 @@ void CPlayWidget::resizeGL(int w, int h)
 
 }
 
- void CPlayWidget::paintGL()
- {
+void QPlayWidget::paintGL()
+{
 
-     //激活纹理单元GL_TEXTURE0
+    //qDebug()<<"paint";
+
+    //激活纹理单元GL_TEXTURE0
+    if(isPause)
+        return;
 
     glActiveTexture(GL_TEXTURE0);
 
@@ -292,8 +304,8 @@ void CPlayWidget::resizeGL(int w, int h)
 
     //使用内存中m_pBufYuv420p数据创建真正的y数据纹理
 
-    //glTexImage2D(GL_TEXTURE_2D, 0, GL_RED_EXT, m_nVideoW, m_nVideoH, 0, GL_RED_EXT, GL_UNSIGNED_BYTE, m_pBufYuv420p);
-    glTexImage2D ( GL_TEXTURE_2D, 0, GL_LUMINANCE, m_nVideoW, m_nVideoH, 0, GL_LUMINANCE, GL_UNSIGNED_BYTE, m_pBufYuv420p);
+    //glTexImage2D(GL_TEXTURE_2D, 0, GL_RED_EXT, m_frame_width, m_nVideoH, 0, GL_RED_EXT, GL_UNSIGNED_BYTE, m_pBufYuv420p);
+    glTexImage2D ( GL_TEXTURE_2D, 0, GL_LUMINANCE, m_frame_width, m_frame_height, 0, GL_LUMINANCE, GL_UNSIGNED_BYTE, m_pBufYuv420p);
 
     glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_LINEAR);
 
@@ -310,8 +322,8 @@ void CPlayWidget::resizeGL(int w, int h)
 
     glBindTexture(GL_TEXTURE_2D, id_u);
 
-    //glTexImage2D(GL_TEXTURE_2D, 0, GL_RED_EXT, m_nVideoW/2, m_nVideoH/2, 0, GL_RED_EXT, GL_UNSIGNED_BYTE, (char*)m_pBufYuv420p+m_nVideoW*m_nVideoH);
-    glTexImage2D ( GL_TEXTURE_2D, 0, GL_LUMINANCE, m_nVideoW/2, m_nVideoH/2, 0, GL_LUMINANCE, GL_UNSIGNED_BYTE, (char*)m_pBufYuv420p+m_nVideoW*m_nVideoH);
+    //glTexImage2D(GL_TEXTURE_2D, 0, GL_RED_EXT, m_frame_width/2, m_frame_height/2, 0, GL_RED_EXT, GL_UNSIGNED_BYTE, (char*)m_pBufYuv420p+m_frame_width*m_nVideoH);
+    glTexImage2D ( GL_TEXTURE_2D, 0, GL_LUMINANCE, m_frame_width/2, m_frame_height/2, 0, GL_LUMINANCE, GL_UNSIGNED_BYTE, (char*)m_pBufYuv420p+m_frame_width*m_frame_height);
 
     glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_LINEAR);
 
@@ -328,7 +340,7 @@ void CPlayWidget::resizeGL(int w, int h)
 
     glBindTexture(GL_TEXTURE_2D, id_v);
 
-    glTexImage2D ( GL_TEXTURE_2D, 0, GL_LUMINANCE, m_nVideoW/2, m_nVideoH/2, 0, GL_LUMINANCE, GL_UNSIGNED_BYTE, (char*)m_pBufYuv420p+m_nVideoW*m_nVideoH*5/4);
+    glTexImage2D ( GL_TEXTURE_2D, 0, GL_LUMINANCE, m_frame_width/2, m_frame_height/2, 0, GL_LUMINANCE, GL_UNSIGNED_BYTE, (char*)m_pBufYuv420p+m_frame_width*m_frame_height*5/4);
 
     glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_LINEAR);
 
@@ -347,4 +359,4 @@ void CPlayWidget::resizeGL(int w, int h)
 
     return;
 
- }
+}

@@ -8,8 +8,8 @@
 #include <QListWidget>
 #include <QListWidgetItem>
 #include <qdebug.h>
-#include <qiconwidget.h>
-#include <qimagelistwidget.h>
+#include <photobrowser/qiconwidget.h>
+#include <photobrowser/qimagelistwidget.h>
 
 class QCustomMenuDialog : public QDialog
 {
@@ -19,9 +19,13 @@ public:
 
 protected:
     void keyPressEvent(QKeyEvent *e);
+    void closeEvent(QCloseEvent *);
+    void moveLeft();
+    void moveRight();
 
 signals:
     void optImageFile(int ,QListWidget *);
+    void closeWidget();
 public slots:
 
 

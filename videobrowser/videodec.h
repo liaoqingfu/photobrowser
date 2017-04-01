@@ -9,15 +9,18 @@ extern "C"{
 #include "libswscale/swscale.h"
 }
 #include <QObject>
+#include <QApplication>
 #include <QImage>
 #include <QThread>
 #include <QDebug>
 #include <QList>
 #include <QMutex>
+#include <QTimer>
+
+#define VGA_WIDTH 640
+#define VGA_HEIGHT 480
 
 #define uint8_t  unsigned char
-#define CAM_WIDTH 1280
-#define CAM_HEIGHT 720
 
 enum PlayState{ Play,Pause,Finish};
 
@@ -32,33 +35,28 @@ public:
 
     void initVideo();
 
-    bool getPauseState()
-    {
-        return isPause;
-    }
+    void closeVideo();
 
-    void setPauseState(bool state)
-    {
-        isPause = state;
-    }
 
     bool getPlayState()
     {
-        return isPlay;
+        return playTimer->isActive();
     }
 
-    void setPlayState(bool state)
+    void setPauseState()
     {
-        isPlay = state;
+        if(playTimer->isActive())
+            playTimer->stop();
+        else
+            playTimer->start();
     }
 
+    QString videoCountTime;
 
-protected:
-    void run();
 
 signals:
     void sendFrame(uint8_t * img);
-    void sendEndFlag(PlayState state);
+    void updatePlayState(PlayState state);
 public slots:
 
     void play();
@@ -76,8 +74,9 @@ private:
     uint8_t *out_buffer;
     int videoStream;
 
-    bool isPlay;
-    bool isPause;
+    int frameFinished;
+
+    QTimer *playTimer;
 
 };
 

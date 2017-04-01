@@ -24,6 +24,9 @@ public:
     //图片多选
     enum IconStates{ Select,NoSelect,Hide };
 
+    //
+    enum DirStates{ Show,Hiden };
+
     //设置图片路径
     void setIconPath(QString path);
 
@@ -39,6 +42,9 @@ public:
     //设置图片选中状态
     void setCheckState(IconStates state);
 
+    //设置图片选中状态
+    void setDirState(DirStates state);
+
     //返回列表项目
     QListWidgetItem *returnItem();
 
@@ -51,6 +57,16 @@ public:
         return isStates;
     }
 
+    QString getFileName()
+    {
+        return this->filename;
+    }
+
+    void setFileName(QString name)
+    {
+        this->filename = name;
+    }
+
 private:
     //存放图片缩略图
     QLabel *label;
@@ -58,6 +74,8 @@ private:
     QLabel *borderlabel;
     //名称
     QLabel *namelabel;
+    //默认路径
+     QLabel *defaultdirlabel;
     //列表项目
     QListWidgetItem *item;
     //图片状态标示
@@ -70,6 +88,8 @@ private:
     QString videosuffix;
     //图片状态
     IconStates isStates;
+
+    QString filename;
 
 };
 

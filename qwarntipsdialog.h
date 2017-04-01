@@ -13,6 +13,12 @@ public:
     explicit QWarnTipsDialog(QWidget *parent = 0,QString message = 0);
     ~QWarnTipsDialog();
 
+protected:
+    void closeEvent(QCloseEvent *);
+
+signals:
+    void closeWidget();
+
 private:
     QLabel *warnlogo;
     QLabel *tipsmessage;

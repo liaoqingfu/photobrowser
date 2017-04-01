@@ -1,12 +1,11 @@
 #include "qcreatedirdialog.h"
-#include "ui_qcreatedirdialog.h"
 
 QCreateDirDialog::QCreateDirDialog(QWidget *parent,QImageListWidget *list) :
     QDialog(parent)
 {
     this->setWindowFlags(this->windowFlags() |Qt::WindowStaysOnTopHint | Qt::FramelessWindowHint);
     this->setFixedSize(550,400);
-    this->setStyleSheet("background-color: rgb(59, 61, 66, 100);border-radius: 10px;  border: 3px  rgb(59, 61, 66, 100);");
+    this->setStyleSheet("background-color: rgb(59, 61, 66, 100);border-radius: 10px;  border: 2px groove black;");
 
     currentlist = list;
 
@@ -18,35 +17,17 @@ QCreateDirDialog::QCreateDirDialog(QWidget *parent,QImageListWidget *list) :
     tittle->setFont(tittlefont);
     tittle->setAlignment(Qt::AlignCenter);
 
-    sureBtn = new QPushButton(tr("确定"));
+    sureBtn = new QKeyBoardBtn(tr("确定"),30,this);
+    sureBtn->setObjectName(tr("44"));
     connect(sureBtn,SIGNAL(clicked()),this,SLOT(on_sureBtn_clicked()));
-    cancelBtn = new QPushButton(tr("取消"));
+
+    cancelBtn = new QKeyBoardBtn(tr("取消"),30,this);
+    cancelBtn->setObjectName(tr("45"));
     connect(cancelBtn,SIGNAL(clicked()),this,SLOT(on_cancelBtn_clicked()));
 
-     sureBtn->setStyleSheet("QPushButton{background-color:  rgb(59, 61, 66, 100); \
-                            color: white; \
-                             border-radius: 10px; \
-                             border: 2px groove gray;\
-                              border-style: outset;}"
-                             "QPushButton:focus{background-color:orange; \
-                              color: white;}"
-                             "QPushButton:pressed{background-color:rgb(85, 170, 255);\
-                             border-style: inset; }");
 
-
- cancelBtn->setStyleSheet("QPushButton{background-color:  rgb(59, 61, 66, 100); \
-                          color: white; \
-                         border-radius: 10px; \
-                         border: 2px groove gray;\
-                         border-style: outset;}"
-                         "QPushButton:focus{background-color:orange; \
-                         color: white;}"
-                         "QPushButton:pressed{background-color:rgb(85, 170, 255);\
-                         border-style: inset; }");
-
-
-    lineEdit = new QLineEdit;
-    lineEdit->setFixedWidth(250);
+    lineEdit = new QLineEdit(NULL);
+    lineEdit->setFixedWidth(500);
     QFont font;
     font.setPixelSize(45);
     lineEdit->setFocusPolicy(Qt::NoFocus);
@@ -54,50 +35,59 @@ QCreateDirDialog::QCreateDirDialog(QWidget *parent,QImageListWidget *list) :
     lineEdit->setAlignment(Qt::AlignCenter);
     lineEdit->setStyleSheet("QLineEdit{ color: black; \
                             background-color: white; \
-                            border-radius: 10px; \
-                            border: 2px groove gray;\
-                            border-style: outset;}");
+            border-radius: 10px; \
+    border-style: outset;}");
 
-    lineEdit->setText(currentlist->currentItem()->text().split('.').first());
+//键盘
+keyboard = new KeyBoardForm;
 
-    keyboard = new KeyBoardForm;
+//窗体布局
+QHBoxLayout  *hlayout1 = new QHBoxLayout;
+hlayout1->addStretch();
+hlayout1->addWidget(lineEdit);
+hlayout1->addStretch();
 
-    QHBoxLayout  *hlayout1 = new QHBoxLayout;
-    hlayout1->addSpacing(200);
-    hlayout1->addWidget(lineEdit);
-    hlayout1->addSpacing(200);
+QHBoxLayout  *hlayout2 = new QHBoxLayout;
+hlayout2->addSpacing(200);
+hlayout2->addWidget(sureBtn);
+hlayout2->addSpacing(200);
+hlayout2->addWidget(cancelBtn);
+hlayout2->addSpacing(200);
 
-    QHBoxLayout  *hlayout2 = new QHBoxLayout;
-    hlayout2->addSpacing(200);
-    hlayout2->addWidget(sureBtn);
-    hlayout2->addSpacing(200);
-    hlayout2->addWidget(cancelBtn);
-    hlayout2->addSpacing(200);
+QVBoxLayout *layout = new QVBoxLayout;
+layout->setContentsMargins(9,9,9,9);
+layout->addWidget(tittle);
+layout->addLayout(hlayout1);
+layout->addWidget(keyboard);
+layout->addLayout(hlayout2);
 
-    QVBoxLayout *layout = new QVBoxLayout;
-    layout->setContentsMargins(9,9,9,9);
-    layout->addWidget(tittle);
-    layout->addLayout(hlayout1);
-    layout->addWidget(keyboard);
-    layout->addLayout(hlayout2);
+this->setLayout(layout);
 
-    this->setLayout(layout);
+//文件家前缀
+lineEdit->setText(tr("DIR_"));
 
-    lineEdit->setText(tr("新建文件夾"));
+connect(keyboard,SIGNAL(sendWord(QString)),this,SLOT(setLineEdit(QString)));
+connect(keyboard,SIGNAL(delWord()),this,SLOT(delLineEdit()));
 
-    connect(keyboard,SIGNAL(sendWord(QString)),this,SLOT(setLineEdit(QString)));
-    connect(keyboard,SIGNAL(delWord()),this,SLOT(delLineEdit()));
+//检查字符是否存在定时器
+timer = new QTimer(this);
+connect(timer,SIGNAL(timeout()),this,SLOT(check_lineEdit()));
+timer->start(500);
 
-    timer = new QTimer(this);
-    connect(timer,SIGNAL(timeout()),this,SLOT(check_lineEdit()));
-    timer->start(500);
+//是否创建
+isCreate = true;
 
-
+QKeyBoardBtn *keybtn = this->findChild<QKeyBoardBtn *>(tr("1"));
+keybtn->setFocus();
 
 }
 
 QCreateDirDialog::~QCreateDirDialog()
 {
+    delete tittle;
+    delete keyboard;
+    delete sureBtn;
+    delete cancelBtn;
     delete timer;
 }
 
@@ -115,6 +105,7 @@ void QCreateDirDialog::setLineEdit(QString name)
     lineEdit->setText(tmp);
 }
 
+//删除一个字母
 void QCreateDirDialog::delLineEdit()
 {
     QString tmp;
@@ -125,17 +116,34 @@ void QCreateDirDialog::delLineEdit()
     lineEdit->setText(tmp);
 }
 
-
+//确定
 void QCreateDirDialog::on_sureBtn_clicked()
 {
+    if(!isCreate)
+        return;
+
+    isCreate = false;
+
+    int newnum = currentlist->getListItemName().count();
+
     foreach(QString name,currentlist->getListItemName())
     {
-        if(lineEdit->text() == name)
+        QIconWidget *item = currentlist->findChild<QIconWidget *>(name);
+
+        if(newnum == name.toInt())
         {
-            QWarnTipsDialog *wtdlg = new QWarnTipsDialog(NULL,tr("不能新建相同的文件夾！"));
+            newnum++;
+        }
+
+        if(lineEdit->text() == item->getFileName())
+        {
+            QWarnTipsDialog *wtdlg = new QWarnTipsDialog(NULL,tr("文件夹重复！"));
             wtdlg->setWindowModality(Qt::WindowModal);
             wtdlg->move((this->width() - wtdlg->width())/2 , (this->height() - wtdlg->height())/2);
             wtdlg->exec();
+
+            isCreate = true;
+
             return;
         }
     }
@@ -145,28 +153,138 @@ void QCreateDirDialog::on_sureBtn_clicked()
     QDir dir;
     if(dir.mkdir(dir_path))
     {
-        QIconWidget *iconitem = new QIconWidget(currentlist,0,lineEdit->text(),dir_path);
+
+        QIconWidget *iconitem = new QIconWidget(currentlist,newnum,lineEdit->text(),dir_path);
 
         QPixmap pixmap(tr(":/images/dir.png"));
         iconitem->setIcon(pixmap.scaled(QSize(WICONSIZE,HICONSIZE)));
         currentlist->setItemWidget(iconitem->returnItem(),iconitem);
-        currentlist->addListName(lineEdit->text());
+        currentlist->addListName(iconitem->objectName());
         currentlist->setCurrentItem(iconitem->returnItem());
     }
 
     this->close();
 }
 
+//取消
 void QCreateDirDialog::on_cancelBtn_clicked()
-{
+{    
     this->close();
 }
 
+//关闭事件
+void QCreateDirDialog::closeEvent(QCloseEvent *)
+{
+    emit closeWidget();
+}
 
+// 检查是否输入
 void QCreateDirDialog::check_lineEdit()
 {
     if(lineEdit->text().isEmpty())
         sureBtn->setEnabled(false);
     else
         sureBtn->setEnabled(true);
+}
+
+//获取键值
+void QCreateDirDialog::getKeyEvent(int key)
+{
+    if(key == Qt::Key_R)
+    {
+        this->on_cancelBtn_clicked();
+        return;
+    }
+
+    QKeyEvent rekey(QEvent::KeyPress,key,Qt::NoModifier);
+    QCoreApplication::sendEvent(this,&rekey);
+}
+
+//键盘事件
+void QCreateDirDialog::keyPressEvent(QKeyEvent *e)
+{
+    QKeyBoardBtn *item;
+
+    if(e->key() == Qt::Key_Return)
+    {
+        QCoreApplication::sendEvent(focusWidget(),e);
+    }
+
+    if(e->key()== Qt::Key_Left)
+    {
+
+        if( focusWidget()->objectName().toInt()  ==  1 )
+        {
+            item = this->findChild<QKeyBoardBtn *>(tr("45"));
+            item->setFocus();
+            return  ;
+        }
+
+        item = this->findChild<QKeyBoardBtn *>(QString::number(focusWidget()->objectName().toInt( ) - 1));
+
+        if(!item->isEnabled() && (focusWidget()->objectName().toInt( ) >= 2))
+               item = this->findChild<QKeyBoardBtn *>(QString::number(focusWidget()->objectName().toInt( ) - 2));
+
+        item->setFocus();
+
+    }
+    else if(e->key() == Qt::Key_Right)
+    {
+        if( focusWidget()->objectName().toInt()  ==  45 )
+        {
+            item = this->findChild<QKeyBoardBtn *>(tr("1"));
+            item->setFocus();
+            return  ;
+        }
+
+        item = this->findChild<QKeyBoardBtn *>(QString::number(focusWidget()->objectName().toInt( ) + 1));
+
+        if(!item->isEnabled())
+               item = this->findChild<QKeyBoardBtn *>(QString::number(focusWidget()->objectName().toInt( ) + 2));
+
+        item->setFocus();
+    }
+    else if(e->key() == Qt::Key_Up)
+    {
+        if((focusWidget()->objectName().toInt() <= 10 ) || (focusWidget()->objectName().toInt() >= 41 ))
+        {
+            if(focusWidget()->objectName().toInt()  ==  1)
+            {
+                item = this->findChild<QKeyBoardBtn *>(tr("45"));
+                item->setFocus();
+                return  ;
+            }
+            //            item = this->findChild<QKeyBoardBtn *>(QString::number(focusWidget()->objectName().toInt( ) - 1));
+            //            item->setFocus();
+            return ;
+        }
+
+        item = this->findChild<QKeyBoardBtn *>(QString::number(focusWidget()->objectName().toInt( ) - 10));
+        item->setFocus();
+    }
+
+    else if(e->key() == Qt::Key_Down)
+    {
+        if((focusWidget()->objectName().toInt() >= 31) )
+        {
+            if(focusWidget()->objectName().toInt()  ==  45)
+            {
+                item = this->findChild<QKeyBoardBtn *>(tr("1"));
+                item->setFocus();
+                return  ;
+            }
+
+            //            item = this->findChild<QKeyBoardBtn *>(QString::number(focusWidget()->objectName().toInt( ) + 1));
+            //            item->setFocus();
+            return ;
+        }
+
+        if(focusWidget()->objectName().toInt() <= 30)
+        {
+            item = this->findChild<QKeyBoardBtn *>(QString::number(focusWidget()->objectName().toInt( ) + 10));
+            item->setFocus();
+        }
+    }
+
+    QWidget::keyPressEvent(e);
 }

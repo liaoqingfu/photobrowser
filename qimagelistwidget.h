@@ -18,6 +18,8 @@ public:
     explicit QImageListWidget(QWidget *parent = 0);
     ~QImageListWidget();
 
+    void deleteListWidget();
+
     //设置对象名称
     void setObjectParent(QWidget *parent);
 
@@ -72,6 +74,8 @@ protected:
 signals:
     //点击选择事件
     void clickselectList(QImageListWidget *list);
+
+    void closeTabList( );
 
 public slots:
     //选择当前项目

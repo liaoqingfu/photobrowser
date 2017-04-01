@@ -5,16 +5,16 @@ QImageListWidget::QImageListWidget(QWidget *parent) :
 {
     getPos = true;
 
-    this->setStyleSheet(tr("{background-color:rgb(59, 61, 66, 100);}"));
+    this->setStyleSheet(tr("background-color:rgb(59, 61, 66, 100);"));
     //设置QImageListWidget中的单元项的图片大小
     this->setIconSize(QSize(WICONSIZE,HICONSIZE));
-    this->setResizeMode(QListView::Adjust);
+    this->setResizeMode(QListView::Fixed);//
     //设置QImageListWidget的显示模式
     this->setViewMode(QListView::IconMode);
     //设置QImageListWidget中的单元项不可被拖动
     this->setMovement(QListView::Static);
     //设置QImageListWidget中的单元项的间距
-    this->setSpacing(25);
+    this->setSpacing(31);
 
     this->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
     //点击选中时，前后状态
@@ -28,10 +28,11 @@ QImageListWidget:: ~QImageListWidget()
 
 }
 
+
 //键盘事件
 void QImageListWidget::keyPressEvent(QKeyEvent *e)
 {
-    if(e->key() == Qt::Key_Up)
+    if(e->key() == Qt::Key_Up)//上移
     {
         if(this->currentRow() <= 3)
         {
@@ -44,13 +45,16 @@ void QImageListWidget::keyPressEvent(QKeyEvent *e)
 
         this->setCurrentRow(this->currentRow() - 4);
     }
-    else if(e->key() == Qt::Key_Down)
+    else if(e->key() == Qt::Key_Down)//xia移
     {
 
         if((this->count() - this->currentRow()) <= 4)
         {
             if((this->count() - 1) == this->currentRow())
+            {
+                this->scrollToBottom();
                 return;
+            }
 
             this->setCurrentRow(this->currentRow() + 1);
             return;
@@ -59,44 +63,55 @@ void QImageListWidget::keyPressEvent(QKeyEvent *e)
         this->setCurrentRow(this->currentRow() + 4);
 
     }
-    else if(e->key() == Qt::Key_Left)
+    else if(e->key() == Qt::Key_Left)//左移
     {
         if(this->currentRow() == 0)
             return;
 
         this->setCurrentRow(this->currentRow() - 1);
     }
-    else if(e->key() == Qt::Key_Right)
+    else if(e->key() == Qt::Key_Right)//右移
     {
 
         if((this->count() - 1) == this->currentRow())
+        {
+            this->scrollToBottom();
             return;
+        }
 
         this->setCurrentRow(this->currentRow() + 1);
     }
     else if(e->key() == Qt::Key_Return)//点击
     {
-        emit itemClicked(this->currentItem());
+        if(this->count() !=  0)
+              emit itemClicked(this->currentItem());
     }
-    else if(e->key() == Qt::Key_Enter)//返回
+    else if(e->key() == Qt::Key_R)//返回
     {
-        foreach (QString itemname, listItemName) {
-            QIconWidget *item = this->findChild<QIconWidget *>(itemname);
-            this->removeItemWidget(item->returnItem());
-            delete item->returnItem();
-            delete item;
-        }
-
-        listItemName.clear();
-        this->clear();
-
+        emit  closeTabList();
     }
-    else if(e->key() == Qt::Key_O)
+    else if(e->key() == Qt::Key_M)//菜单
     {
         emit clickselectList(this);
     }
 
     QWidget::keyPressEvent(e);
+}
+
+
+//删除列表
+void QImageListWidget::deleteListWidget()
+{
+    foreach (QString itemname, listItemName) {
+        qDebug()<<itemname;
+        QIconWidget *item = this->findChild<QIconWidget *>(itemname);
+        this->removeItemWidget(item->returnItem());
+        delete item->returnItem();
+        delete item;
+    }
+
+    listItemName.clear();
+    this->clear();
 }
 
 
@@ -113,9 +128,13 @@ void QImageListWidget::addListName(QString itemname)
 }
 
 //改变列表一个名称
-void QImageListWidget::changeListName(QString oldnaeme, QString newname)
+void QImageListWidget::changeListName(QString oldname, QString newname)
 {
-    listItemName.replaceInStrings(oldnaeme,newname);
+    if(listItemName.removeOne(oldname))
+    {
+        listItemName<<newname;
+    }
+    qDebug()<<listItemName;
 }
 
 //鼠标移动事件
@@ -165,6 +184,7 @@ void QImageListWidget::mouseMoveEvent(QMouseEvent *event)
     }
 
 }
+
 
 //选择当前项目
 void QImageListWidget::selectCurrentItem(QListWidgetItem *current, QListWidgetItem *previous)

@@ -3,18 +3,15 @@
 
 #include <QWidget>
 #include <QMutex>
-#include <qimagelistwidget.h>
+#include <photobrowser/qimagelistwidget.h>
 #include <QPainter>
 #include <QPixmap>
-#include <videoutil.h>
+#include <photobrowser/videoutil.h>
 
 #include "qcustommenudialog.h"
 #include "qrenamedialog.h"
 #include "qdeletedialog.h"
 #include "videobrowser/qvideobrowser.h"
-
-#define VGA_WIDTH 640
-#define VGA_HEIGHT 480
 
 extern QMutex mutex;
 class QShowImageWidget : public QWidget
@@ -23,6 +20,10 @@ class QShowImageWidget : public QWidget
 public:
     explicit QShowImageWidget(QWidget *parent = 0,QImageListWidget *list = 0);
     ~QShowImageWidget();
+
+signals:
+    void closeWidget();
+    void sendKey(int);
 
 public slots:
     //菜单操作
@@ -34,6 +35,15 @@ public slots:
     //切换图像模式
     void switchImageMode();
 
+    void getKeyEvent(int key);
+
+    void closeCustomMenu();
+
+    void closeOptDeleteMenu();
+
+    void closeOptRenameMenu();
+
+    void closeVideoBrowser();
 
 protected:
     //键盘事件
@@ -42,8 +52,22 @@ protected:
     //画布事件
     void paintEvent(QPaintEvent *e);
 
+    void closeEvent(QCloseEvent *);
+
+    void moveLeft();
+
+    void moveRight();
+
 
 private:
+    QCustomMenuDialog *dlg ;
+    QRenameDialog * rdlg ;
+    QDeleteDialog  *ddlg;
+
+    QVideoBrowser *videobroswer ;
+
+    QLabel *rolabel;
+
     //图像序号
     QLabel *numberlabel;
     //缩放
@@ -65,6 +89,12 @@ private:
     //一帧
     unsigned char *rgbframe;
 
+    bool isOpenVideo;
+    bool isOpenMenu;
+    bool isOptMenu;
+
+    int frame_width;
+    int frame_height;
 };
 
 #endif // QSHOWIMAGEWIDGET_H

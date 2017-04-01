@@ -1,34 +1,25 @@
 #include "qshowvieowidget.h"
-#include <videoutil.h>
 
-QShowVieoWidget::QShowVieoWidget(QWidget *parent,QString videopath) :
+QShowVieoWidget::QShowVieoWidget(QWidget *parent) :
     QWidget(parent)
 {
-    this->resize(640,480);
+    this->resize(VGA_WIDTH,VGA_HEIGHT);
 
-    playWidget = new CPlayWidget(this);
-    playWidget->resize(640,480);
+    //opengl窗体显示
+    playWidget = new QPlayWidget(this,VGA_WIDTH,VGA_HEIGHT);
+    playWidget->resize(VGA_WIDTH,VGA_HEIGHT);
     playWidget->move(0,0);
 
-    OVideoDec = new VideoDec(NULL,videopath);
-    connect(OVideoDec,SIGNAL(sendEndFlag(PlayState)),this,SIGNAL(sendEndFlag(PlayState)));
-    connect(OVideoDec,SIGNAL(sendFrame(unsigned char*)),this,SLOT(updateVideoFrame(unsigned char*)));
-    OVideoDec->start();
 }
 
 
 QShowVieoWidget::~QShowVieoWidget()
 {
-    if(OVideoDec->isRunning())
-    {
-        OVideoDec->terminate();
-    }
-    delete OVideoDec;
-    delete playWidget;
 }
 
 
-void QShowVieoWidget ::updateVideoFrame(uint8_t *yuv)
+//显示视频帧
+void QShowVieoWidget::showFrame(unsigned char *yuv)
 {
     playWidget->PlayOneFrame(yuv);
 }

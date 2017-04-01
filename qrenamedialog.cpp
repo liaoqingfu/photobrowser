@@ -5,7 +5,7 @@ QRenameDialog::QRenameDialog(QWidget *parent,QImageListWidget *list) :
 {
     this->setWindowFlags(this->windowFlags() |Qt::WindowStaysOnTopHint | Qt::FramelessWindowHint);
     this->setFixedSize(550,400);
-    this->setStyleSheet("background-color: rgb(59, 61, 66, 100);border-radius: 10px;  border: 3px  rgb(59, 61, 66, 100);");
+    this->setStyleSheet("background-color: rgb(59, 61, 66, 100);border-radius: 10px;  border: 2px groove black;");
 
     currentlist = list;
 
@@ -17,35 +17,16 @@ QRenameDialog::QRenameDialog(QWidget *parent,QImageListWidget *list) :
     tittle->setFont(tittlefont);
     tittle->setAlignment(Qt::AlignCenter);
 
-    sureBtn = new QPushButton(tr("确定"));
+    sureBtn = new QKeyBoardBtn(tr("确定"),30,this);
+    sureBtn->setObjectName(tr("44"));
     connect(sureBtn,SIGNAL(clicked()),this,SLOT(on_sureBtn_clicked()));
-    cancelBtn = new QPushButton(tr("取消"));
+    cancelBtn = new QKeyBoardBtn(tr("取消"),30,this);
+    cancelBtn->setObjectName(tr("45"));
     connect(cancelBtn,SIGNAL(clicked()),this,SLOT(on_cancelBtn_clicked()));
-
-     sureBtn->setStyleSheet("QPushButton{background-color:  rgb(59, 61, 66, 100); \
-                            color: white; \
-                             border-radius: 10px; \
-                             border: 2px groove gray;\
-                              border-style: outset;}"
-                             "QPushButton:focus{background-color:orange; \
-                              color: white;}"
-                             "QPushButton:pressed{background-color:rgb(85, 170, 255);\
-                             border-style: inset; }");
-
-
- cancelBtn->setStyleSheet("QPushButton{background-color:  rgb(59, 61, 66, 100); \
-                          color: white; \
-                         border-radius: 10px; \
-                         border: 2px groove gray;\
-                         border-style: outset;}"
-                         "QPushButton:focus{background-color:orange; \
-                         color: white;}"
-                         "QPushButton:pressed{background-color:rgb(85, 170, 255);\
-                         border-style: inset; }");
 
 
     lineEdit = new QLineEdit;
-    lineEdit->setFixedWidth(250);
+    lineEdit->setFixedWidth(500);
     QFont font;
     font.setPixelSize(45);
     lineEdit->setFocusPolicy(Qt::NoFocus);
@@ -53,48 +34,64 @@ QRenameDialog::QRenameDialog(QWidget *parent,QImageListWidget *list) :
     lineEdit->setAlignment(Qt::AlignCenter);
     lineEdit->setStyleSheet("QLineEdit{ color: black; \
                             background-color: white; \
-                            border-radius: 10px; \
-                            border: 2px groove gray;\
-                            border-style: outset;}");
+            border-radius: 10px; \
+border: 2px groove gray;\
+    border-style: outset;}");
 
-    lineEdit->setText(currentlist->currentItem()->text().split('.').first());
+//显示当前名字
+QIconWidget *item = currentlist->findChild<QIconWidget *>(currentlist->currentItem()->text());
+lineEdit->setText(item->getFileName().split('.').first());
 
-    keyboard = new KeyBoardForm;
+//键盘
+keyboard = new KeyBoardForm;
 
-    QHBoxLayout  *hlayout1 = new QHBoxLayout;
-    hlayout1->addSpacing(200);
-    hlayout1->addWidget(lineEdit);
-    hlayout1->addSpacing(200);
+//窗体布局
+QHBoxLayout  *hlayout1 = new QHBoxLayout;
+hlayout1->addStretch();
+hlayout1->addWidget(lineEdit);
+hlayout1->addStretch();
 
-    QHBoxLayout  *hlayout2 = new QHBoxLayout;
-    hlayout2->addSpacing(200);
-    hlayout2->addWidget(sureBtn);
-    hlayout2->addSpacing(200);
-    hlayout2->addWidget(cancelBtn);
-    hlayout2->addSpacing(200);
+QHBoxLayout  *hlayout2 = new QHBoxLayout;
+hlayout2->addSpacing(200);
+hlayout2->addWidget(sureBtn);
+hlayout2->addSpacing(200);
+hlayout2->addWidget(cancelBtn);
+hlayout2->addSpacing(200);
 
-    QVBoxLayout *layout = new QVBoxLayout;
-    layout->setContentsMargins(9,9,9,9);
-    layout->addWidget(tittle);
-    layout->addLayout(hlayout1);
-    layout->addWidget(keyboard);
-    layout->addLayout(hlayout2);
+QVBoxLayout *layout = new QVBoxLayout;
+layout->setContentsMargins(9,9,9,9);
+layout->addWidget(tittle);
+layout->addLayout(hlayout1);
+layout->addWidget(keyboard);
+layout->addLayout(hlayout2);
 
-    this->setLayout(layout);
+this->setLayout(layout);
 
-        if(currentlist->currentItem()->text().right(4).left(1) == ".")
-                   suffix = tr(".") + currentlist->currentItem()->text().split('.').last();
+//隐藏后缀
+if(item->getFileName().right(4).left(1) == ".")
+suffix = tr(".") + item->getFileName().split('.').last();
 
-        connect(keyboard,SIGNAL(sendWord(QString)),this,SLOT(setLineEdit(QString)));
-        connect(keyboard,SIGNAL(delWord()),this,SLOT(delLineEdit()));
+connect(keyboard,SIGNAL(sendWord(QString)),this,SLOT(setLineEdit(QString)));
+connect(keyboard,SIGNAL(delWord()),this,SLOT(delLineEdit()));
 
-        timer = new QTimer(this);
-        connect(timer,SIGNAL(timeout()),this,SLOT(check_lineEdit()));
-        timer->start(500);
+//检查字符是否存在
+timer = new QTimer(this);
+connect(timer,SIGNAL(timeout()),this,SLOT(check_lineEdit()));
+timer->start(500);
+
+//是否命名
+isRename = true;
+
+QKeyBoardBtn *keybtn = this->findChild<QKeyBoardBtn *>(tr("1"));
+keybtn->setFocus();
 }
 
 QRenameDialog::~QRenameDialog()
 {
+    delete tittle;
+    delete keyboard;
+    delete sureBtn;
+    delete cancelBtn;
     delete timer;
 }
 
@@ -111,6 +108,7 @@ void QRenameDialog::setLineEdit(QString name)
     lineEdit->setText(tmp);
 }
 
+//删除一个字母
 void QRenameDialog::delLineEdit()
 {
     QString tmp;
@@ -121,32 +119,39 @@ void QRenameDialog::delLineEdit()
     lineEdit->setText(tmp);
 }
 
-
+//确定
 void QRenameDialog::on_sureBtn_clicked()
 {
-    foreach(QString name,currentlist->getListItemName())
-    {
-        if(lineEdit->text() + suffix == name)
+    if(!isRename)
+        return;
+
+    isRename = false;
+
+    QIconWidget *currentitem = currentlist->findChild<QIconWidget *>(currentlist->currentItem()->text());
+
+    if( currentitem->getFileName() != (lineEdit->text() + suffix) )
+        foreach(QString name,currentlist->getListItemName())
         {
-            QWarnTipsDialog *wtdlg = new QWarnTipsDialog(NULL,tr("123123213"));
-            wtdlg->setWindowModality(Qt::WindowModal);
-            wtdlg->move((this->width() - wtdlg->width())/2 , (this->height() - wtdlg->height())/2);
-            wtdlg->exec();
-            return;
+            QIconWidget *item = currentlist->findChild<QIconWidget *>(name);
+            if((lineEdit->text() + suffix) == item->getFileName())
+            {
+                QWarnTipsDialog *wtdlg = new QWarnTipsDialog(NULL,tr("命名重复！"));
+                wtdlg->setWindowModality(Qt::WindowModal);
+                wtdlg->move((this->width() - wtdlg->width())/2 , (this->height() - wtdlg->height())/2);
+                wtdlg->exec();
+
+                isRename = true;
+
+                return;
+            }
         }
-    }
 
-    QIconWidget *item = currentlist->findChild<QIconWidget *>(currentlist->currentItem()->text());
-    QString newname = item->getIconPath().remove(item->returnItem()->text()) + lineEdit->text() + suffix;
+    QString newname = currentitem->getIconPath().remove(currentitem->getFileName()) + lineEdit->text() + suffix;
 
-
-    if(QFile::rename(item->getIconPath(),newname))
+    if(QFile::rename(currentitem->getIconPath(),newname))
     {
-        currentlist->changeListName(item->returnItem()->text(),lineEdit->text() + suffix);
-        item->setName(lineEdit->text() + suffix);
-        item->setObjectName(lineEdit->text() + suffix);
-        item->setIconPath(newname);
-        item->returnItem()->setText(lineEdit->text() + suffix);
+        currentitem->setName(lineEdit->text() + suffix);
+        currentitem->setIconPath(newname);
 
         emit changeName();
     }
@@ -154,13 +159,19 @@ void QRenameDialog::on_sureBtn_clicked()
     this->close();
 }
 
+//取消
 void QRenameDialog::on_cancelBtn_clicked()
 {
     this->close();
 }
 
+//关闭事件
+void QRenameDialog::closeEvent(QCloseEvent *)
+{
+    emit closeWidget();
+}
 
-
+// 检查是否输入
 void QRenameDialog::check_lineEdit()
 {
     if(lineEdit->text().isEmpty())
@@ -168,3 +179,109 @@ void QRenameDialog::check_lineEdit()
     else
         sureBtn->setEnabled(true);
 }
+
+//获取键值
+void QRenameDialog::getKeyEvent(int key)
+{
+    if(key == Qt::Key_R)
+    {
+        this->on_cancelBtn_clicked();
+        return;
+    }
+    qDebug()<<"key presserd"<<key;
+
+    QKeyEvent rekey(QEvent::KeyPress,key,Qt::NoModifier);
+    QCoreApplication::sendEvent(this,&rekey);
+}
+
+
+
+//键盘事件
+void QRenameDialog::keyPressEvent(QKeyEvent *e)
+{
+    QKeyBoardBtn *item;
+
+    if(e->key() == Qt::Key_Return)
+    {
+        QCoreApplication::sendEvent(focusWidget(),e);
+    }
+
+    if(e->key()== Qt::Key_Left)
+    {
+
+        if( focusWidget()->objectName().toInt()  ==  1 )
+        {
+            item = this->findChild<QKeyBoardBtn *>(tr("45"));
+            item->setFocus();
+            return  ;
+        }
+
+        item = this->findChild<QKeyBoardBtn *>(QString::number(focusWidget()->objectName().toInt( ) - 1));
+
+        if(!item->isEnabled() && (focusWidget()->objectName().toInt( ) >= 2))
+               item = this->findChild<QKeyBoardBtn *>(QString::number(focusWidget()->objectName().toInt( ) - 2));
+
+        item->setFocus();
+
+    }
+    else if(e->key() == Qt::Key_Right)
+    {
+        if( focusWidget()->objectName().toInt()  ==  45 )
+        {
+            item = this->findChild<QKeyBoardBtn *>(tr("1"));
+            item->setFocus();
+            return  ;
+        }
+
+        item = this->findChild<QKeyBoardBtn *>(QString::number(focusWidget()->objectName().toInt( ) + 1));
+
+        if(!item->isEnabled())
+               item = this->findChild<QKeyBoardBtn *>(QString::number(focusWidget()->objectName().toInt( ) + 2));
+
+        item->setFocus();
+    }
+    else if(e->key() == Qt::Key_Up)
+    {
+        if((focusWidget()->objectName().toInt() <= 10 ) || (focusWidget()->objectName().toInt() >= 41 ))
+        {
+            if(focusWidget()->objectName().toInt()  ==  1)
+            {
+                item = this->findChild<QKeyBoardBtn *>(tr("45"));
+                item->setFocus();
+                return  ;
+            }
+            //            item = this->findChild<QKeyBoardBtn *>(QString::number(focusWidget()->objectName().toInt( ) - 1));
+            //            item->setFocus();
+            return ;
+        }
+
+        item = this->findChild<QKeyBoardBtn *>(QString::number(focusWidget()->objectName().toInt( ) - 10));
+        item->setFocus();
+    }
+
+    else if(e->key() == Qt::Key_Down)
+    {
+        if((focusWidget()->objectName().toInt() >= 31) )
+        {
+            if(focusWidget()->objectName().toInt()  ==  45)
+            {
+                item = this->findChild<QKeyBoardBtn *>(tr("1"));
+                item->setFocus();
+                return  ;
+            }
+
+            //            item = this->findChild<QKeyBoardBtn *>(QString::number(focusWidget()->objectName().toInt( ) + 1));
+            //            item->setFocus();
+            return ;
+        }
+
+        if(focusWidget()->objectName().toInt() <= 30)
+        {
+            item = this->findChild<QKeyBoardBtn *>(QString::number(focusWidget()->objectName().toInt( ) + 10));
+            item->setFocus();
+        }
+    }
+
+    QWidget::keyPressEvent(e);
+}
+
