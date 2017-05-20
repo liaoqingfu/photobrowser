@@ -12,6 +12,6 @@ uint32_t sdl_refresh_timer_cb(uint32_t interval, void *opaque);
 void video_refresh_timer(void *userdata);
 
 //void video_display(VideoState *video);
-
+void freeSWSContext();
 
 #endif

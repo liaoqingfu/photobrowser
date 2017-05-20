@@ -5,7 +5,7 @@
 #include <string>
 #include "Audio.h"
 #include "Video.h"
-#include "photobrowser/videobrowser/qshowvieowidget.h"
+#include "photobrowser/videobrowser/qshowvideowidget.h"
 
 extern "C" {
 
@@ -34,7 +34,7 @@ public:
 
     bool openInput();
 
-    QShowVieoWidget *showvideoW;
+    QShowVideoWidget *showvideoW;
 
     int play_state;//0为播放 1为暂停 2为退出
 };

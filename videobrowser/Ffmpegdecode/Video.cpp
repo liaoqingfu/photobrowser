@@ -36,7 +36,7 @@ VideoState::~VideoState()
     qDebug()<<"clean video queue";
     delete videoq;
     // close（codec）
-     avcodec_close(video_ctx);
+    avcodec_close(video_ctx);
 
     av_frame_free(&frame);
     free(displayFrame->data[0]);

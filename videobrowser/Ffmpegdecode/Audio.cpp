@@ -40,6 +40,8 @@ AudioState::~AudioState()
     if (audio_buff)
         free(audio_buff);
 
+      avcodec_close(audio_ctx);
+
     if(audioq.clearQueue())
     {
         qDebug()<<"clean audio queue";
@@ -53,7 +55,7 @@ bool AudioState::audio_play()
     desired.freq = audio_ctx->sample_rate;
     desired.channels = audio_ctx->channels;
     desired.format = AUDIO_S16SYS;
-    desired.samples = 1024;
+    desired.samples = 1024*2;
     desired.silence = 0;
     desired.userdata = this;
     desired.callback = audio_callback;

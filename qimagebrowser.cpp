@@ -108,6 +108,8 @@ QImageBrowser::~QImageBrowser()
     delete imageWatcher;
     delete yearListWidget;
     delete picListWidget;
+    delete tiltlelabel;
+    delete tabWidget;
 
 }
 

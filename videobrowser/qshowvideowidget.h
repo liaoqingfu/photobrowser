@@ -1,5 +1,5 @@
-#ifndef QSHOWVIEOWIDGET_H
-#define QSHOWVIEOWIDGET_H
+#ifndef QSHOWVIDEOWIDGET_H
+#define QSHOWVIDEOWIDGET_H
 
 #include <QWidget>
 #include <photobrowser/videobrowser/qplaywidget.h>
@@ -7,13 +7,13 @@
 #define VGA_WIDTH 640
 #define VGA_HEIGHT 480
 
-class QShowVieoWidget : public QWidget
+class QShowVideoWidget : public QWidget
 {
     Q_OBJECT
 
 public:
-    explicit QShowVieoWidget(QWidget *parent = 0);
-    ~QShowVieoWidget();
+    explicit QShowVideoWidget(QWidget *parent = 0);
+    ~QShowVideoWidget();
 public:
     void showFrame(unsigned char *yuv);
 
@@ -23,4 +23,4 @@ private:
 
 };
 
-#endif // QSHOWVIEOWIDGET_H
+#endif // QSHOWVIDEOWIDGET_H

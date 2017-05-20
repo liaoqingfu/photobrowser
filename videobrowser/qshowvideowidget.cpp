@@ -1,6 +1,6 @@
-#include "qshowvieowidget.h"
+#include "qshowvideowidget.h"
 
-QShowVieoWidget::QShowVieoWidget(QWidget *parent) :
+QShowVideoWidget::QShowVideoWidget(QWidget *parent) :
     QWidget(parent)
 {
     this->resize(VGA_WIDTH,VGA_HEIGHT);
@@ -13,13 +13,13 @@ QShowVieoWidget::QShowVieoWidget(QWidget *parent) :
 }
 
 
-QShowVieoWidget::~QShowVieoWidget()
+QShowVideoWidget::~QShowVideoWidget()
 {
 }
 
 
 //显示视频帧
-void QShowVieoWidget::showFrame(unsigned char *yuv)
+void QShowVideoWidget::showFrame(unsigned char *yuv)
 {
     playWidget->PlayOneFrame(yuv);
 }

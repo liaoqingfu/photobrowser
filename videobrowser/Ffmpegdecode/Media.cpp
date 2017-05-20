@@ -34,6 +34,7 @@ MediaState::~MediaState()
     }
 
     avformat_close_input(&pFormatCtx);
+    avformat_free_context(pFormatCtx);
 
     pFormatCtx = NULL;
 }
@@ -100,28 +101,34 @@ int decode_thread(void *data)
 
     AVPacket *packet = av_packet_alloc();
 
+    SDL_Delay(100);
+
     while (!quit)
     {
 #if 1
-        if(media->video->videoq->nb_packets > MAX_VIDEO_QUEUE_NUM || \
-                media->audio->audioq.nb_packets > MAX_AUDIO_QUEUE_NUM)
+        if(media->video->videoq->size > MAX_VIDEO_QUEUE_NUM || \
+                media->audio->audioq.size > MAX_AUDIO_QUEUE_NUM)
         {
             // printf("缓冲帧数过多\n");
             SDL_Delay(10);
             continue;
         }
 #endif
+
         int ret = av_read_frame(media->pFormatCtx, packet);
 
+#if 0
         if (ret < 0)
         {
-            if ((media->video->videoq->nb_packets  == 0) &&  (media->audio->audioq.nb_packets == 0 ) && (media->video->frameq\
-                                                                                                         .nb_frames == 0) )
+            if ((media->video->videoq->size  == 0) &&  (media->audio->audioq.size == 0 ) && (media->video->frameq\
+                                                                                             .nb_frames == 0) )
             {
                 errorflag = -1;//检测空帧
             }
 
-            if (errorflag  = -1 )
+            //errorflag = -1;
+
+            if (errorflag  ==  -1)
             {
                 SDL_Event event;
                 event.type = FF_QUIT_EVENT;
@@ -139,6 +146,40 @@ int decode_thread(void *data)
             else
                 break;
         }
+#else
+
+        if(ret < 0)
+        {
+            if(ret == AVERROR_EOF || url_feof(media->pFormatCtx->pb))
+            {
+                if(media->video->videoq->size == 0 || media->audio->audioq.size == 0)
+                {
+                    SDL_Event event;
+                    event.type = FF_QUIT_EVENT;
+                    SDL_PushEvent(&event);
+                    printf("退出讀码\n");
+                    qDebug()<<media->video->videoq->size << ":"  <<media->audio->audioq.size<< ":" <<  media->video->frameq.nb_frames;
+                    qDebug("quit1!\n");
+                    break;
+                }
+            }
+
+            if(media->pFormatCtx->pb && media->pFormatCtx->pb->error)
+            {
+                if(media->video->videoq->size == 0 || media->audio->audioq.size == 0)
+                {
+                    SDL_Event event;
+                    event.type = FF_QUIT_EVENT;
+                    SDL_PushEvent(&event);
+                    printf("退出讀码\n");
+                    qDebug("quit2!\n");
+                    break;
+                }
+            }
+            continue;
+        }
+
+#endif
 
         errorflag = 0 ;
 

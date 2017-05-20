@@ -51,8 +51,8 @@ bool FrameQueue::deQueue(AVFrame **frame)
             queue.pop();
 
             av_frame_unref(tmp);
+            SDL_memset(tmp, 0, sizeof(*tmp));
             av_frame_free(&tmp);
-
             nb_frames--;
 
             ret = true;

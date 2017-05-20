@@ -34,7 +34,7 @@
 #include "photobrowser/videobrowser/Ffmpegdecode/VideoDisplay.h"
 
 
-#include "qshowvieowidget.h"
+#include "qshowvideowidget.h"
 
 class QVideoBrowser : public QWidget
 {
@@ -77,7 +77,7 @@ public :
 private:
     QLabel *playlogo;
     QString videopath;
-    QShowVieoWidget *showvideo;
+    QShowVideoWidget *showvideo;
 
     unsigned char *headframe;
     char * filename;

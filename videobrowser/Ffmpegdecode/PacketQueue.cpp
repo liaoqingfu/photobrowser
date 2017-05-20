@@ -50,6 +50,7 @@ bool PacketQueue::deQueue(AVPacket *packet, bool block)
 
             queue.pop();
             av_packet_unref(&pkt);
+            SDL_memset(&pkt,0,sizeof(pkt));
             av_free_packet(&pkt);
             nb_packets--;
             size -= packet->size;
@@ -76,19 +77,22 @@ bool PacketQueue::deQueue(AVPacket *packet, bool block)
 
 bool PacketQueue::clearQueue()
 {
-     SDL_LockMutex(mutex);
+    SDL_LockMutex(mutex);
     while(!queue.empty())
     {
+
         AVPacket pkt = queue.front();
 
         queue.pop();
+        nb_packets--;
+        size -= pkt.size;
         av_packet_unref(&pkt);
         av_free_packet(&pkt);
-        nb_packets--;
+
 
         if(nb_packets == 0)
             break;
     }
-     SDL_UnlockMutex(mutex);
+    SDL_UnlockMutex(mutex);
     return true;
 }

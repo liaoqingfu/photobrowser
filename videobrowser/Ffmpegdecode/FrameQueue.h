@@ -5,8 +5,8 @@
 #include <SDL2/SDL_thread.h>
 #include <queue>
 
-#define MAX_VIDEO_QUEUE_NUM 64
-#define MAX_AUDIO_QUEUE_NUM 128
+#define MAX_VIDEO_QUEUE_NUM (5*256*1024)
+#define MAX_AUDIO_QUEUE_NUM (5*16*1024)
 #define ERROR_NULL_FRAME 50
 
 extern "C"{

@@ -80,6 +80,8 @@ QVideoBrowser::~QVideoBrowser()
     free(filename);
     free(headframe);
 
+    freeSWSContext();
+
     qDebug()<<"释放内存";
     //释放内存
     delete mediaplayer;
@@ -89,7 +91,7 @@ QVideoBrowser::~QVideoBrowser()
 //初始化窗体
 void QVideoBrowser::initWidget()
 {
-    showvideo = new QShowVieoWidget(this);
+    showvideo = new QShowVideoWidget(this);
     showvideo->lower();
     showvideo->move(0,0);
 
@@ -107,6 +109,10 @@ void QVideoBrowser::closeVideoPlayer()
 {
     if(mediaplayer != NULL)
     {
+        //clean buff
+        mediaplayer->video->videoq->clearQueue();
+        mediaplayer->audio->audioq.clearQueue();
+        mediaplayer->video->frameq.clearQueue();
 
         quit = true;//外部变量退出
 

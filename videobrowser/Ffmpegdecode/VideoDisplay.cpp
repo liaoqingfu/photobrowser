@@ -1,7 +1,7 @@
 
 #include "VideoDisplay.h"
 #include <iostream>
-#include "photobrowser/videobrowser/qshowvieowidget.h"
+#include "photobrowser/videobrowser/qshowvideowidget.h"
 
 #define VIDEO_FOLLOW_AUDIO 1
 
@@ -14,7 +14,7 @@ extern "C"{
 
 static const double SYNC_THRESHOLD = 0.01;
 static const double NOSYNC_THRESHOLD = 10.0;
-
+static struct  SwsContext *sws_ctx;
 // 延迟delay ms后刷新video帧
 void schedule_refresh(MediaState *media, int delay)
 {
@@ -34,7 +34,7 @@ void video_refresh_timer(void *userdata)
 {
     MediaState *media = (MediaState*)userdata;
     VideoState *video = media->video;
-    QShowVieoWidget *showvideoW = media->showvideoW;
+    QShowVideoWidget *showvideoW = media->showvideoW;
 
     if (video->stream_index >= 0)
     {
@@ -47,7 +47,7 @@ void video_refresh_timer(void *userdata)
             /*video->videoq->zero_frame_num = 0;*/
             video->frameq.deQueue(&video->frame);
 
-#if VIDEO_FOLLOW_AUDIO
+#ifdef VIDEO_FOLLOW_AUDIO
             // 将视频同步到音频上，计算下一帧的延迟时间
             double current_pts = *(double*)video->frame->opaque;
             double delay = current_pts - video->frame_last_pts;
@@ -84,8 +84,13 @@ void video_refresh_timer(void *userdata)
 #else
             schedule_refresh(media, 0);
 #endif
-            SwsContext *sws_ctx = sws_getContext(video->video_ctx->width, video->video_ctx->height, video->video_ctx->pix_fmt,
-                                                 video->displayFrame->width,video->displayFrame->height,(AVPixelFormat)video->displayFrame->format, SWS_BILINEAR, NULL, NULL, NULL);
+            if(sws_ctx == NULL)
+            {
+                sws_ctx  = sws_getContext(video->video_ctx->width, video->video_ctx->height, video->video_ctx->pix_fmt,
+                                          video->displayFrame->width,video->displayFrame->height,(AVPixelFormat)video->displayFrame->format, SWS_BILINEAR, NULL, NULL, NULL);
+
+                printf("init sws_getContext\n");
+            }
 
             sws_scale(sws_ctx, (uint8_t const * const *)video->frame->data, video->frame->linesize, 0,
                       video->video_ctx->height, video->displayFrame->data, video->displayFrame->linesize);
@@ -99,7 +104,7 @@ void video_refresh_timer(void *userdata)
 #endif
             showvideoW->showFrame((unsigned char *)video->displayFrame->data[0]);
 
-            sws_freeContext(sws_ctx);
+            //sws_freeContext(sws_ctx);
 
             av_frame_unref(video->frame);
 
@@ -109,4 +114,14 @@ void video_refresh_timer(void *userdata)
     {
         schedule_refresh(media, 100);//100
     }
+}
+
+
+void freeSWSContext()
+{
+    if(sws_ctx != NULL)
+    {
+        sws_freeContext(sws_ctx);
+    }
+    sws_ctx = NULL;
 }
